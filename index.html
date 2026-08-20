@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#303840">
+  <title>PEI Mutual Residential Rental Inspection</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="header-text">
+    <h1>PEI Mutual Residential Rental Inspection</h1>
+    <p class="subtitle">Prince Edward Island — Existing Residential Rental Buildings</p>
+    <p class="standards-line">
+      <strong>Current reference standards:</strong>
+      NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024)
+    </p>
+    <button id="standardsToggle" class="text-button" type="button">About the standards ▾</button>
+    <div id="standardsPanel" class="standards-panel hidden">
+      <p><strong>Technical codes and standards that may be referenced:</strong></p>
+      <ul>
+        <li>National Building Code of Canada 2020 (NBC 2020)</li>
+        <li>National Fire Code of Canada 2020 (NFC 2020)</li>
+        <li>National Plumbing Code of Canada 2020 (NPC 2020)</li>
+        <li>Canadian Electrical Code, Part I, 2024 (CEC 2024)</li>
+        <li>NFPA 1 Fire Code (2024)</li>
+        <li>NFPA 101 Life Safety Code (2024)</li>
+        <li>CSA B139 — Oil-burning equipment</li>
+        <li>CSA B149.2 — Propane-burning appliances/equipment</li>
+        <li>CSA B365 — Solid-fuel-burning appliances/equipment</li>
+      </ul>
+      <p><strong>PEI legislation:</strong> Residential Tenancy Act; Public Health Act — Rental Accommodation Regulations; Fire Safety Act and Fire Safety Regulations.</p>
+      <p class="important-note"><strong>Important:</strong> Current codes are reference standards where applicable. An existing building is not necessarily required to comply retrospectively with every provision that applies to new construction. Use <strong>R — Further Review Required</strong> where applicability cannot reasonably be determined during the visual inspection.</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button id="newInspection" class="secondary-button" type="button">New</button>
+    <button id="saveInspection" class="primary-button" type="button">Save</button>
+  </div>
+</header>
+
+<div id="saveNotice" class="save-notice hidden">Inspection saved on this device.</div>
+
+<main class="inspection-container">
+  <section class="legend-card">
+    <h2>Inspection Status</h2>
+    <div class="legend-grid">
+      <span><b>S</b> Satisfactory</span><span><b>D</b> Deficiency</span>
+      <span><b>IC</b> Immediate Concern</span><span><b>R</b> Further Review Required</span>
+      <span><b>N/I</b> Not Inspected / Not Accessible</span><span><b>N/A</b> Not Applicable</span>
+    </div>
+  </section>
+
+  <section class="inspection-section" data-section="property">
+    <button class="section-header" type="button">
+      <span>1. Property Information</span><span class="section-arrow">▼</span>
+    </button>
+    <div class="section-content">
+      <div class="form-grid">
+        <label>Property Address<input type="text" id="propertyAddress"></label>
+        <label>Owner / Insured<input type="text" id="ownerInsured"></label>
+        <label>Inspection Date<input type="date" id="inspectionDate"></label>
+        <label>Inspector<input type="text" id="inspector"></label>
+        <label>Number of Dwelling Units<input type="number" id="dwellingUnits" min="1"></label>
+        <label>Number of Storeys<input type="number" id="storeys" min="1"></label>
+        <label>Approximate Year Constructed<input type="number" id="yearConstructed" min="1800" max="2100"></label>
+        <label>Building Type
+          <select id="buildingType">
+            <option value="">Select…</option>
+            <option>Single detached rental</option><option>Duplex</option><option>Triplex</option>
+            <option>4+ unit apartment building</option><option>Townhouse / row housing</option>
+            <option>Mixed-use building</option><option>Other</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="subsection">
+        <h3>Foundation / Below-Grade Space</h3>
+        <div class="choice-grid">
+          <label><input type="checkbox"> Full basement</label>
+          <label><input type="checkbox"> Partial basement</label>
+          <label><input type="checkbox" id="crawlSpace"> Crawl space</label>
+          <label><input type="checkbox"> Slab-on-grade</label>
+          <label><input type="checkbox"> Combination</label>
+          <label><input type="checkbox"> Unable to determine</label>
+        </div>
+
+        <div id="crawlSpaceDetails" class="conditional-panel hidden">
+          <h4>Crawl Space Details</h4>
+          <div class="form-grid">
+            <label>Approximate maximum clear height
+              <select id="crawlHeight">
+                <option value="">Select…</option>
+                <option value="lte1.8">1.8 m (5 ft 11 in) or less</option>
+                <option value="gt1.8">More than 1.8 m (5 ft 11 in)</option>
+                <option value="unknown">Unable to determine</option>
+              </select>
+            </label>
+            <label>Access
+              <select id="crawlAccess">
+                <option value="">Select…</option><option>Interior access</option><option>Exterior access</option>
+                <option>Access observed but not entered</option><option>No access observed</option><option>Not inspected</option>
+              </select>
+            </label>
+          </div>
+          <div class="choice-grid">
+            <label><input type="checkbox" id="crawlOccupied"> Used for occupancy</label>
+            <label><input type="checkbox" id="crawlStorage"> Used for storage</label>
+            <label><input type="checkbox" id="crawlServices"> Building services only</label>
+            <label><input type="checkbox" id="crawlFlue"> Flue pipe(s) pass through space</label>
+            <label><input type="checkbox" id="crawlPlenum"> Used as an air plenum</label>
+            <label><input type="checkbox" id="crawlGroundCover"> Ground-cover / vapour barrier present</label>
+          </div>
+          <div id="crawlAlert" class="rule-alert hidden"></div>
+          <details class="guidance">
+            <summary>Inspector Guidance</summary>
+            <p>Record observed height and use rather than assuming every low space is a crawl space. Use R where classification is uncertain.</p>
+          </details>
+          <details class="code-reference">
+            <summary>Code Reference</summary>
+            <p>NBC 2020 contains crawl-space provisions in Parts 3 and 9. For certain Part 3 purposes, conditions such as height over 1.8 m, occupancy, passage of flue pipes, or use as a plenum can affect treatment of the space.</p>
+          </details>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Renovations / Alterations Observed or Reported</h3>
+        <div class="choice-grid">
+          <label><input type="checkbox"> No significant alterations apparent</label><label><input type="checkbox"> Addition</label>
+          <label><input type="checkbox"> Basement conversion</label><label><input type="checkbox"> Additional dwelling unit(s)</label>
+          <label><input type="checkbox"> Electrical upgrade</label><label><input type="checkbox"> Plumbing upgrade</label>
+          <label><input type="checkbox"> Heating system replacement</label><label><input type="checkbox"> Roof replacement</label>
+          <label><input type="checkbox"> Deck / balcony addition</label><label><input type="checkbox"> Interior reconfiguration</label>
+          <label><input type="checkbox"> Change of occupancy / use</label>
+        </div>
+        <label>Notes / approximate dates<textarea rows="3"></textarea></label>
+      </div>
+    </div>
+  </section>
+
+  <div id="generatedSections"></div>
+
+  <section class="inspection-section" data-section="fire">
+    <button class="section-header" type="button">
+      <span>7. Fire & Life Safety</span><span class="section-arrow">▶</span>
+    </button>
+    <div class="section-content collapsed">
+      <details class="guidance">
+        <summary>PEI Fire Code Framework</summary>
+        <p>PEI Fire Safety Regulations put NFC 2020, NFPA 1 (2024), and NFPA 101 (2024) in force. Record observable conditions and use R where applicability is uncertain.</p>
+      </details>
+
+      <div class="subsection">
+        <h3>Smoke Alarms — Dwelling Units</h3>
+        <div class="choice-grid">
+          <label><input type="checkbox"> Outside each separate sleeping area</label>
+          <label><input type="checkbox"> On each level of dwelling unit</label>
+          <label><input type="checkbox"> Basement level where applicable</label>
+          <label><input type="checkbox"> Inside sleeping rooms / bedrooms</label>
+          <label><input type="checkbox"> Coverage incomplete</label>
+          <label><input type="checkbox"> Unable to fully inspect</label>
+        </div>
+        <div class="items-container" data-items="smoke"></div>
+        <details class="guidance"><summary>Inspector Guidance</summary>
+          <p>Record actual alarm locations. Do not automatically classify the absence of an alarm inside every bedroom as a deficiency for every existing apartment building.</p>
+        </details>
+      </div>
+
+      <div class="subsection">
+        <h3>Carbon Monoxide Detection</h3>
+        <div class="choice-grid">
+          <label><input type="checkbox" class="co-source"> Fuel-burning heating appliance</label>
+          <label><input type="checkbox" class="co-source"> Fuel-burning water heater</label>
+          <label><input type="checkbox" class="co-source"> Fireplace / wood appliance</label>
+          <label><input type="checkbox" class="co-source"> Other fuel-burning appliance</label>
+          <label><input type="checkbox" class="co-source"> Attached / communicating garage</label>
+        </div>
+        <div id="coMessage" class="rule-alert neutral">Select any potential CO source observed.</div>
+        <div class="items-container" data-items="co"></div>
+      </div>
+
+      <div class="subsection"><h3>Means of Egress / Exits</h3><div class="items-container" data-items="egress"></div></div>
+      <div class="subsection"><h3>Fire Separations / Compartmentation</h3><div class="items-container" data-items="separations"></div></div>
+
+      <div class="subsection important-subsection">
+        <h3>Building Fire Alarm System — Applicability Guide</h3>
+        <div id="fireAlarmRule" class="rule-alert neutral">Enter storeys and dwelling units in Section 1.</div>
+        <details class="code-reference" open>
+          <summary>Rule Used by This Tool</summary>
+          <p>For an existing apartment building, the NFPA 101 Chapter 31 general screening trigger used here is <strong>4 or more storeys OR more than 11 dwelling units</strong>. Exceptions can apply based on separation and independent exits.</p>
+        </details>
+        <div class="choice-grid">
+          <label><input type="checkbox"> Exception may apply based on observed configuration</label>
+          <label><input type="checkbox"> Required fire-resistance / exception cannot be established visually</label>
+        </div>
+        <div class="items-container" data-items="alarm"></div>
+      </div>
+
+      <div class="subsection important-subsection">
+        <h3>Automatic Sprinkler System — Applicability Guide</h3>
+        <div class="rule-alert neutral">Do not assume every existing multi-unit rental requires sprinklers. Existing-building requirements depend on occupancy and building characteristics.</div>
+        <div class="choice-grid">
+          <label><input type="radio" name="sprinklerPresence"> No sprinkler system observed</label>
+          <label><input type="radio" name="sprinklerPresence"> Sprinkler system installed</label>
+          <label><input type="radio" name="sprinklerPresence"> Partial sprinkler protection observed</label>
+          <label><input type="radio" name="sprinklerPresence"> Unable to determine</label>
+        </div>
+        <details class="guidance"><summary>Inspector Guidance</summary>
+          <p>For an ordinary existing low-rise apartment building, “No sprinkler system observed” should not automatically receive D. Use R when characteristics suggest further review.</p>
+        </details>
+        <div class="items-container" data-items="sprinklers"></div>
+      </div>
+
+      <div class="subsection important-subsection">
+        <h3>Portable Fire Extinguishers — Applicability Guide</h3>
+        <div class="rule-alert neutral">Do not apply a blanket rule that every individual apartment must contain a portable fire extinguisher.</div>
+        <div class="choice-grid">
+          <label><input type="checkbox"> Common corridor / common area</label><label><input type="checkbox"> Mechanical / furnace room</label>
+          <label><input type="checkbox"> Laundry / utility area</label><label><input type="checkbox"> Electrical / service area</label>
+          <label><input type="checkbox"> Parking / garage area</label><label><input type="checkbox"> None observed</label>
+          <label><input type="checkbox"> Applicability uncertain</label>
+        </div>
+        <div class="items-container" data-items="extinguishers"></div>
+      </div>
+
+      <div class="subsection"><h3>Combustible Storage / Fire Hazards</h3><div class="items-container" data-items="firehazards"></div></div>
+    </div>
+  </section>
+
+  <div id="generatedSectionsAfterFire"></div>
+
+  <section class="inspection-section" data-section="summary">
+    <button class="section-header" type="button">
+      <span>19. Inspection Summary</span><span class="section-arrow">▶</span>
+    </button>
+    <div class="section-content collapsed">
+      <label>Immediate Safety / Serious Risk<textarea rows="4"></textarea></label>
+      <label>Repairs Required / Risk Improvements<textarea rows="4"></textarea></label>
+      <label>Further Professional or Regulatory Review<textarea rows="4"></textarea></label>
+      <label>Preventive Maintenance<textarea rows="4"></textarea></label>
+      <h3>Overall Insurance Risk</h3>
+      <div class="choice-grid">
+        <label><input type="radio" name="overallRisk"> Acceptable</label>
+        <label><input type="radio" name="overallRisk"> Acceptable subject to recommendations</label>
+        <label><input type="radio" name="overallRisk"> Deficiencies requiring correction</label>
+        <label><input type="radio" name="overallRisk"> Significant deficiencies</label>
+        <label><input type="radio" name="overallRisk"> Further specialist assessment required</label>
+      </div>
+      <label>Inspector Comments<textarea rows="5"></textarea></label>
+    </div>
+  </section>
+</main>
+
+<template id="inspectionItemTemplate">
+  <article class="inspection-item">
+    <div class="inspection-item-heading">
+      <h4 class="item-title"></h4>
+      <button class="mini-guidance-button hidden" type="button">Guidance</button>
+    </div>
+    <div class="status-buttons">
+      <button type="button" data-status="S">S</button><button type="button" data-status="D">D</button>
+      <button type="button" data-status="IC">IC</button><button type="button" data-status="R">R</button>
+      <button type="button" data-status="NI">N/I</button><button type="button" data-status="NA">N/A</button>
+    </div>
+    <div class="item-guidance hidden"></div>
+    <div class="deficiency-details hidden">
+      <label>Observation / Deficiency<textarea rows="3" class="observation" placeholder="Describe the observed condition…"></textarea></label>
+      <div class="photo-row">
+        <label class="photo-button">Add Photo<input type="file" accept="image/*" capture="environment" class="photo-input"></label>
+        <button class="remove-photo secondary-button hidden" type="button">Remove Photo</button>
+      </div>
+      <div class="photo-preview"></div>
+    </div>
+  </article>
+</template>
+
+<script src="data/inspection-rules.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
