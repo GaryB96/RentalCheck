@@ -40,7 +40,7 @@
       <button id="newInspection" class="secondary-button" type="button">New</button>
       <button id="openInspection" class="secondary-button" type="button">Open</button>
       <button id="saveInspection" class="primary-button" type="button">Save</button>
-      <button id="exportInspection" class="primary-button" type="button">Export PDF</button>
+      <button id="exportInspection" class="primary-button" type="button">Export</button>
     </div>
   </div>
 </header>
@@ -285,7 +285,7 @@
     <div class="modal-header">
       <div>
         <h2 id="exportTitle">Export Inspection Report</h2>
-        <p>Create a clean report from the current inspection.</p>
+        <p>Create a PDF and open the device Share Sheet.</p>
       </div>
       <button id="closeExportModal" class="icon-button" type="button" aria-label="Close">×</button>
     </div>
@@ -310,18 +310,15 @@
     </div>
 
     <div class="export-help">
-      <p><strong>On iPad:</strong> tap <strong>Create PDF Report</strong>. In the print preview, pinch outward on the preview to open the PDF, then use the Share button to save it to Files, iCloud Drive, OneDrive, email, etc.</p>
+      <p><strong>On iPad:</strong> tap <strong>Create & Share PDF</strong>. The Share Sheet should open with the PDF attached so you can choose OneDrive, Files, Mail, or another destination. If file sharing is unavailable, the PDF will download instead.</p>
     </div>
 
     <div class="modal-footer">
       <button id="cancelExport" class="secondary-button" type="button">Cancel</button>
-      <button id="createPdfReport" class="primary-button" type="button">Create PDF Report</button>
+      <button id="createPdfReport" class="primary-button" type="button">Create & Share PDF</button>
     </div>
   </div>
 </div>
-
-
-<div id="printReportHost" class="print-report-host" aria-hidden="true"></div>
 
 <template id="inspectionItemTemplate">
   <article class="inspection-item">
@@ -346,6 +343,7 @@
   </article>
 </template>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/inspection-rules.js"></script>
 <script src="app.js"></script>
 </body>

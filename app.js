@@ -720,7 +720,7 @@ function blobToDataURL(blob) {
   });
 }
 
-async function buildReportMarkup(options) {
+async function buildReportHTML(options) {
   const address = qs("#propertyAddress")?.value?.trim() || "Untitled Property";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
@@ -738,22 +738,23 @@ async function buildReportMarkup(options) {
 
     const items = getExportableItems(section, options);
 
+    // Collect subsection choice groups that are useful in the fire section.
     const choiceGroups = [];
     if (title.startsWith("7.")) {
       [...section.querySelectorAll(".subsection")].forEach(sub => {
         const subTitle = sub.querySelector("h3")?.textContent?.trim();
         const choices = getSelectedChoices(sub);
-        if (subTitle && choices.length) choiceGroups.push({ title: subTitle, choices });
+        if (subTitle && choices.length) {
+          choiceGroups.push({ title: subTitle, choices });
+        }
       });
     }
 
     if (!items.length && !choiceGroups.length) continue;
 
     const rows = [];
-
     for (const item of items) {
       let photoHTML = "";
-
       if (options.includePhotos && item.photoBlob) {
         try {
           const src = await blobToDataURL(item.photoBlob);
@@ -783,7 +784,6 @@ async function buildReportMarkup(options) {
       </div>`).join("");
 
     let guidanceHTML = "";
-
     if (options.includeGuidance) {
       const notes = [...section.querySelectorAll(".guidance p, .code-reference p")]
         .map(p => p.textContent.replace(/\s+/g, " ").trim())
@@ -807,13 +807,12 @@ async function buildReportMarkup(options) {
       </section>`);
   }
 
+  // Summary
   const summarySection = qs('[data-section="summary"]');
-
   const summaryFields = [...summarySection.querySelectorAll("label")]
     .map(label => {
       const ta = label.querySelector("textarea");
       if (!ta || !ta.value.trim()) return null;
-
       return {
         label: readLabelText(label),
         value: ta.value.trim()
@@ -844,58 +843,471 @@ async function buildReportMarkup(options) {
         </div>` : ""}
     </section>`;
 
+  const generated = new Date();
   const generatedText = new Intl.DateTimeFormat("en-CA", {
     dateStyle: "medium",
     timeStyle: "short"
-  }).format(new Date());
+  }).format(generated);
 
-  return `
-    <header class="report-header">
-      <h1>PEI Mutual Residential Rental Inspection</h1>
-      <div class="subtitle">Existing Residential Rental Building — Insurance Risk Inspection Report</div>
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inspection Report - ${escapeHTML(address)}</title>
+<style>
+  @page { size: letter; margin: 0.55in; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#20262c;
+    font-size:10.5pt;
+    line-height:1.38;
+    background:white;
+  }
+  .report-header {
+    border-bottom:3px solid #303840;
+    padding-bottom:12px;
+    margin-bottom:16px;
+  }
+  .report-header h1 {
+    margin:0 0 3px;
+    font-size:19pt;
+  }
+  .report-header .subtitle {
+    color:#5d6872;
+    font-size:10pt;
+    margin-bottom:10px;
+  }
+  .property-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:7px 20px;
+    font-size:9.5pt;
+  }
+  .property-row strong { display:inline-block; min-width:118px; }
+  .standards {
+    margin-top:12px;
+    padding:8px 10px;
+    background:#f2f4f6;
+    border-left:4px solid #697987;
+    font-size:8.8pt;
+  }
+  .report-section {
+    page-break-inside:auto;
+    margin:0 0 16px;
+  }
+  .report-section h2 {
+    font-size:13pt;
+    margin:0 0 8px;
+    padding-bottom:4px;
+    border-bottom:1px solid #aeb5bb;
+  }
+  .report-item {
+    border:1px solid #d5d9dd;
+    border-left:5px solid #8e989f;
+    padding:7px 9px;
+    margin:0 0 6px;
+    page-break-inside:avoid;
+  }
+  .report-item.status-D { border-left-color:#a97100; }
+  .report-item.status-IC { border-left-color:#a63030; }
+  .report-item.status-R { border-left-color:#476aa6; }
+  .report-item.status-S { border-left-color:#46764b; }
+  .report-item-top {
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+  }
+  .report-item-title { font-weight:700; }
+  .report-status {
+    flex-shrink:0;
+    font-size:8.8pt;
+    font-weight:700;
+    color:#4c5660;
+  }
+  .report-observation {
+    margin-top:5px;
+    padding-top:5px;
+    border-top:1px dotted #c5c9cd;
+  }
+  .report-photo { margin-top:8px; }
+  .report-photo img {
+    max-width:4.8in;
+    max-height:3.5in;
+    object-fit:contain;
+    border:1px solid #cbd0d4;
+  }
+  .report-choice-group {
+    margin:0 0 7px;
+    padding:6px 8px;
+    background:#f6f7f8;
+    font-size:9pt;
+  }
+  .report-guidance {
+    margin-top:9px;
+    padding:8px 10px;
+    border-left:4px solid #60788d;
+    background:#f7f9fa;
+    font-size:8.8pt;
+    page-break-inside:avoid;
+  }
+  .report-guidance p { margin:4px 0; }
+  .summary-block {
+    margin:0 0 10px;
+    page-break-inside:avoid;
+  }
+  .summary-block h3 {
+    margin:0 0 3px;
+    font-size:10.5pt;
+  }
+  .summary-block p { margin:0; }
+  .overall-risk {
+    margin-top:12px;
+    padding:10px;
+    border:2px solid #4c5964;
+    font-size:11pt;
+  }
+  .report-footer {
+    margin-top:18px;
+    padding-top:8px;
+    border-top:1px solid #c8cdd1;
+    font-size:8pt;
+    color:#66717a;
+  }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <header class="report-header">
+    <h1>PEI Mutual Residential Rental Inspection</h1>
+    <div class="subtitle">Existing Residential Rental Building — Insurance Risk Inspection Report</div>
 
-      <div class="property-grid">
-        <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
-        <div class="property-row"><strong>Owner / Insured:</strong> ${escapeHTML(owner)}</div>
-        <div class="property-row"><strong>Inspection Date:</strong> ${escapeHTML(formatInspectionDate(date))}</div>
-        <div class="property-row"><strong>Inspector:</strong> ${escapeHTML(inspector)}</div>
-        <div class="property-row"><strong>Building Type:</strong> ${escapeHTML(buildingType)}</div>
-        <div class="property-row"><strong>Year Constructed:</strong> ${escapeHTML(year)}</div>
-        <div class="property-row"><strong>Dwelling Units:</strong> ${escapeHTML(units)}</div>
-        <div class="property-row"><strong>Storeys:</strong> ${escapeHTML(storeys)}</div>
-      </div>
+    <div class="property-grid">
+      <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
+      <div class="property-row"><strong>Owner / Insured:</strong> ${escapeHTML(owner)}</div>
+      <div class="property-row"><strong>Inspection Date:</strong> ${escapeHTML(formatInspectionDate(date))}</div>
+      <div class="property-row"><strong>Inspector:</strong> ${escapeHTML(inspector)}</div>
+      <div class="property-row"><strong>Building Type:</strong> ${escapeHTML(buildingType)}</div>
+      <div class="property-row"><strong>Year Constructed:</strong> ${escapeHTML(year)}</div>
+      <div class="property-row"><strong>Dwelling Units:</strong> ${escapeHTML(units)}</div>
+      <div class="property-row"><strong>Storeys:</strong> ${escapeHTML(storeys)}</div>
+    </div>
 
-      <div class="standards">
-        <strong>Current reference standards:</strong>
-        NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024).
-        Current codes are used as reference standards where applicable; an existing building is not
-        necessarily required to comply retrospectively with every provision applicable to new construction.
-      </div>
-    </header>
+    <div class="standards">
+      <strong>Current reference standards:</strong>
+      NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024).
+      Current codes are used as reference standards where applicable; an existing building is not
+      necessarily required to comply retrospectively with every provision applicable to new construction.
+    </div>
+  </header>
 
-    ${sectionBlocks.join("")}
-    ${summaryHTML}
+  ${sectionBlocks.join("")}
+  ${summaryHTML}
 
-    <footer class="report-footer">
-      Report generated ${escapeHTML(generatedText)}. This report documents a visual insurance risk inspection
-      and does not constitute certification of compliance with applicable building, fire, electrical, plumbing,
-      or other codes.
-    </footer>`;
+  <footer class="report-footer">
+    Report generated ${escapeHTML(generatedText)}. This report documents a visual insurance risk inspection
+    and does not constitute certification of compliance with applicable building, fire, electrical, plumbing,
+    or other codes.
+  </footer>
+
+<script>
+  window.addEventListener("load", () => {
+    setTimeout(() => window.print(), 400);
+  });
+</script>
+</body>
+</html>`;
 }
 
-function waitForReportImages(container) {
-  const images = [...container.querySelectorAll("img")];
 
-  if (!images.length) return Promise.resolve();
+function safeFileName(value) {
+  return (value || "Residential Rental Inspection")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  return Promise.all(images.map(img => {
-    if (img.complete) return Promise.resolve();
+function photoFormat(blob) {
+  const type = (blob?.type || "").toLowerCase();
+  if (type.includes("png")) return "PNG";
+  if (type.includes("webp")) return "WEBP";
+  return "JPEG";
+}
 
-    return new Promise(resolve => {
-      img.addEventListener("load", resolve, { once: true });
-      img.addEventListener("error", resolve, { once: true });
+async function generateInspectionPdf(options) {
+  if (!window.jspdf?.jsPDF) throw new Error("PDF library did not load.");
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter", compress: true });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const contentWidth = pageWidth - margin * 2;
+  const bottom = pageHeight - 42;
+  let y = margin;
+
+  const address = qs("#propertyAddress")?.value?.trim() || "Untitled Property";
+  const owner = qs("#ownerInsured")?.value?.trim() || "";
+  const date = qs("#inspectionDate")?.value || "";
+  const inspector = qs("#inspector")?.value?.trim() || "";
+  const units = qs("#dwellingUnits")?.value || "";
+  const storeys = qs("#storeys")?.value || "";
+  const year = qs("#yearConstructed")?.value || "";
+  const buildingType = qs("#buildingType")?.value || "";
+
+  function newPage() { doc.addPage(); y = margin; }
+  function ensureSpace(h) { if (y + h > bottom) newPage(); }
+
+  function addText(text, x, opts = {}) {
+    const {
+      size = 10, style = "normal", maxWidth = contentWidth,
+      lineHeight = 1.22, color = [32, 38, 44]
+    } = opts;
+    doc.setFont("helvetica", style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(String(text || ""), maxWidth);
+    const height = Math.max(size * lineHeight, lines.length * size * lineHeight);
+    ensureSpace(height + 3);
+    doc.text(lines, x, y);
+    y += lines.length * size * lineHeight;
+  }
+
+  function addHeading(text) {
+    ensureSpace(32);
+    y += 6;
+    addText(text, margin, { size: 13, style: "bold", lineHeight: 1.05 });
+    doc.setDrawColor(160);
+    doc.line(margin, y + 1, pageWidth - margin, y + 1);
+    y += 10;
+  }
+
+  function addMeta(label, value, x, width) {
+    if (!value) return;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(40);
+    doc.text(`${label}:`, x, y);
+    const labelWidth = doc.getTextWidth(`${label}: `);
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(String(value), width - labelWidth);
+    doc.text(lines, x + labelWidth, y);
+  }
+
+  addText("PEI Mutual Residential Rental Inspection", margin, { size: 17, style: "bold", lineHeight: 1.05 });
+  addText("Existing Residential Rental Building — Insurance Risk Inspection Report", margin, {
+    size: 9, color: [90, 100, 108], lineHeight: 1.15
+  });
+  y += 8;
+
+  const colW = contentWidth / 2 - 8;
+  [
+    [["Property", address], ["Owner / Insured", owner]],
+    [["Inspection Date", date], ["Inspector", inspector]],
+    [["Building Type", buildingType], ["Year Constructed", year]],
+    [["Dwelling Units", units], ["Storeys", storeys]]
+  ].forEach(row => {
+    ensureSpace(16);
+    addMeta(row[0][0], row[0][1], margin, colW);
+    addMeta(row[1][0], row[1][1], margin + contentWidth / 2 + 8, colW);
+    y += 15;
+  });
+
+  y += 5;
+  ensureSpace(45);
+  doc.setFillColor(242, 244, 246);
+  doc.rect(margin, y, contentWidth, 38, "F");
+  y += 10;
+  addText(
+    "Current reference standards: NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024). Current codes are reference standards where applicable; an existing building is not necessarily required to comply retrospectively with every provision applicable to new construction.",
+    margin + 8,
+    { size: 7.4, maxWidth: contentWidth - 16, color: [60, 68, 76], lineHeight: 1.16 }
+  );
+  y += 10;
+
+  for (const section of qsa(".inspection-section")) {
+    const title = getSectionTitle(section);
+    if (!title || title.startsWith("1.") || title.startsWith("19.")) continue;
+
+    const items = getExportableItems(section, options);
+    const choiceGroups = title.startsWith("7.")
+      ? [...section.querySelectorAll(".subsection")].map(sub => ({
+          title: sub.querySelector("h3")?.textContent?.trim() || "",
+          choices: getSelectedChoices(sub)
+        })).filter(g => g.title && g.choices.length)
+      : [];
+
+    const guidanceNotes = options.includeGuidance
+      ? [...section.querySelectorAll(".guidance p, .code-reference p")]
+          .map(p => p.textContent.replace(/\s+/g, " ").trim()).filter(Boolean)
+      : [];
+
+    if (!items.length && !choiceGroups.length && !guidanceNotes.length) continue;
+
+    addHeading(title);
+
+    for (const group of choiceGroups) {
+      addText(group.title, margin, { size: 9, style: "bold", lineHeight: 1.08 });
+      addText(group.choices.join("; "), margin + 8, {
+        size: 8, maxWidth: contentWidth - 8, color: [70, 78, 85], lineHeight: 1.16
+      });
+      y += 4;
+    }
+
+    for (const item of items) {
+      ensureSpace(38);
+
+      const colors = {
+        S: [70, 118, 75], D: [169, 113, 0], IC: [166, 48, 48],
+        R: [71, 106, 166], NI: [120, 125, 130], NA: [120, 125, 130]
+      };
+      const accent = colors[item.status] || [140, 145, 150];
+
+      doc.setFillColor(...accent);
+      doc.rect(margin, y, 3, 16, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.2);
+      doc.setTextColor(30);
+      const titleLines = doc.splitTextToSize(item.title, contentWidth - 155);
+      doc.text(titleLines, margin + 9, y + 9);
+
+      doc.setFontSize(7.8);
+      doc.setTextColor(...accent);
+      doc.text(statusLabel(item.status), pageWidth - margin, y + 9, { align: "right" });
+
+      y += Math.max(20, titleLines.length * 10 + 5);
+
+      if (item.observation) {
+        addText(`Observation: ${item.observation}`, margin + 9, {
+          size: 8.5, maxWidth: contentWidth - 9, lineHeight: 1.2
+        });
+        y += 4;
+      }
+
+      if (options.includePhotos && item.photoBlob) {
+        try {
+          const dataUrl = await blobToDataURL(item.photoBlob);
+          const props = doc.getImageProperties(dataUrl);
+          const maxW = 300, maxH = 220;
+          let w = maxW, h = (props.height * w) / props.width;
+          if (h > maxH) { h = maxH; w = (props.width * h) / props.height; }
+          ensureSpace(h + 12);
+          doc.addImage(dataUrl, photoFormat(item.photoBlob), margin + 9, y, w, h, undefined, "FAST");
+          y += h + 8;
+        } catch (error) {
+          console.warn("Photo could not be added to PDF.", error);
+          addText("Attached photo could not be rendered in PDF.", margin + 9, {
+            size: 8, color: [120, 60, 60]
+          });
+        }
+      }
+
+      doc.setDrawColor(220);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 7;
+    }
+
+    if (guidanceNotes.length) {
+      ensureSpace(35);
+      addText("Inspector / Code Guidance", margin, { size: 8.5, style: "bold" });
+      guidanceNotes.forEach(note => {
+        addText(note, margin + 8, {
+          size: 7.5, maxWidth: contentWidth - 8, color: [65, 74, 82], lineHeight: 1.16
+        });
+        y += 2;
+      });
+      y += 5;
+    }
+  }
+
+  const summarySection = qs('[data-section="summary"]');
+  addHeading("19. Inspection Summary");
+
+  [...summarySection.querySelectorAll("label")].forEach(label => {
+    const ta = label.querySelector("textarea");
+    if (!ta || !ta.value.trim()) return;
+    addText(readLabelText(label), margin, { size: 9, style: "bold", lineHeight: 1.08 });
+    addText(ta.value.trim(), margin + 8, { size: 8.5, maxWidth: contentWidth - 8, lineHeight: 1.2 });
+    y += 5;
+  });
+
+  const overallRisk = getSelectedChoices(summarySection).find(x =>
+    ["Acceptable", "Acceptable subject to recommendations", "Deficiencies requiring correction",
+     "Significant deficiencies", "Further specialist assessment required"].includes(x)
+  );
+
+  if (overallRisk) {
+    ensureSpace(36);
+    doc.setDrawColor(70);
+    doc.rect(margin, y, contentWidth, 28);
+    y += 18;
+    addText(`Overall Insurance Risk: ${overallRisk}`, margin + 8, {
+      size: 10, style: "bold", maxWidth: contentWidth - 16
     });
-  }));
+    y += 8;
+  }
+
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.7);
+    doc.setTextColor(95);
+    doc.text("Visual insurance risk inspection — not certification of code compliance.", margin, pageHeight - 20);
+    doc.text(`Page ${p} of ${pages}`, pageWidth - margin, pageHeight - 20, { align: "right" });
+  }
+
+  doc.setProperties({
+    title: `${address} - Residential Rental Inspection`,
+    subject: "Residential Rental Insurance Inspection",
+    author: inspector || "PEI Mutual",
+    creator: "PEI Mutual Residential Rental Inspection App"
+  });
+
+  const dateForName = date || new Date().toISOString().slice(0, 10);
+  return {
+    blob: doc.output("blob"),
+    filename: safeFileName(`${address} - Rental Inspection - ${dateForName}`) + ".pdf",
+    title: `${address} Residential Rental Inspection`
+  };
+}
+
+async function shareOrDownloadPdf(result) {
+  const file = new File([result.blob], result.filename, { type: "application/pdf" });
+
+  if (navigator.share && navigator.canShare) {
+    try {
+      const shareData = {
+        title: result.title,
+        text: "Residential rental inspection report",
+        files: [file]
+      };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return "shared";
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") return "cancelled";
+      console.warn("Share failed; using download fallback.", error);
+    }
+  }
+
+  const url = URL.createObjectURL(result.blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = result.filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return "downloaded";
 }
 
 async function createPdfReadyReport() {
@@ -906,46 +1318,38 @@ async function createPdfReadyReport() {
     includeGuidance: qs("#exportIncludeGuidance").checked
   };
 
+  const button = qs("#createPdfReport");
+  const original = button.textContent;
+
   try {
+    button.disabled = true;
+    button.textContent = "Creating PDF…";
     await saveCurrentInspection(false);
-  } catch (e) {
-    console.warn("Could not save before export.", e);
-  }
 
-  const host = qs("#printReportHost");
+    const result = await generateInspectionPdf(options);
+    button.textContent = "Opening Share Sheet…";
+    const outcome = await shareOrDownloadPdf(result);
 
-  try {
-    host.innerHTML = await buildReportMarkup(options);
-    host.setAttribute("aria-hidden", "false");
-
-    await waitForReportImages(host);
-
-    closeExportModal();
-
-    document.body.classList.add("printing-report");
-
-    // Give iOS/Chrome/WebKit one rendering frame before invoking native print.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.print();
-      });
-    });
-
+    if (outcome === "shared") {
+      closeExportModal();
+      showSaveNotice("PDF shared.");
+    } else if (outcome === "downloaded") {
+      closeExportModal();
+      showSaveNotice("PDF downloaded.");
+    }
   } catch (error) {
-    console.error(error);
-    document.body.classList.remove("printing-report");
-    host.innerHTML = "";
-    host.setAttribute("aria-hidden", "true");
-    alert("The inspection report could not be created.");
+    console.error("PDF export failed:", error);
+    if (!window.jspdf?.jsPDF) {
+      alert("The PDF generator did not load. Check the internet connection and reload the app.");
+    } else {
+      alert("The PDF could not be created. Please try again.");
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
   }
 }
 
-function cleanupAfterPrint() {
-  const host = qs("#printReportHost");
-  document.body.classList.remove("printing-report");
-  host.innerHTML = "";
-  host.setAttribute("aria-hidden", "true");
-}
 
 function openExportModal() {
   qs("#exportModal").classList.remove("hidden");
@@ -1019,16 +1423,6 @@ function wireInputs() {
     if (event.key !== "Escape") return;
     if (!qs("#openInspectionModal").classList.contains("hidden")) closeOpenModal();
     if (!qs("#exportModal").classList.contains("hidden")) closeExportModal();
-  });
-
-  window.addEventListener("afterprint", cleanupAfterPrint);
-
-  // Safari/iOS can be inconsistent about afterprint, so visibility restoration
-  // also cleans up after returning from the native print sheet.
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && document.body.classList.contains("printing-report")) {
-      setTimeout(cleanupAfterPrint, 500);
-    }
   });
 }
 
