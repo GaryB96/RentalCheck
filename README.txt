@@ -1,32 +1,40 @@
-PEI Mutual Residential Rental Inspection — SAVE / OPEN VERSION
+PEI Mutual Residential Rental Inspection — EXPORT VERSION
 
-Replace these files in your existing project:
+Replace in your existing project:
 - index.html
 - styles.css
 - app.js
 
-Your existing:
+Keep:
 - data/inspection-rules.js
-can remain unchanged. A matching copy is also included here for convenience.
+A matching copy is included.
 
-WHAT CHANGED
-- Multiple saved inspections using IndexedDB
-- Open button shows a searchable saved-inspection list
-- Each record displays address, inspection date, owner/insured and last-saved time
-- Saved inspections can be reopened
-- Saved inspections can be deleted
-- Photos are stored with the saved inspection and restored when reopened
-- New starts a blank inspection
-- After the first manual Save, later changes auto-save after a short delay
-- Header shows the current inspection and whether unsaved changes remain
+NEW EXPORT FUNCTION
+- "Export PDF" button in header
+- Optional inclusion of:
+  * satisfactory items
+  * N/A and Not Inspected items
+  * photos
+  * code / inspector guidance
+- Creates a clean print-ready inspection report
+- Includes property details, rated inspection items, observations, photos, fire-section selections, summary, overall risk, reference standards and disclaimer
+- Automatically opens the browser print dialog
 
-IMPORTANT
-Saved inspections live in browser storage on that device/browser. They are not yet synced to another device or exported.
-Clearing browser/site data can delete them. Export/backup will be the next development step.
+ON IPAD
+1. Tap Export PDF.
+2. Choose report options.
+3. Tap Create PDF Report.
+4. Safari opens the print preview.
+5. Pinch outward on the document preview to open it as a PDF.
+6. Tap Share.
+7. Save to Files/iCloud Drive/OneDrive/email/etc.
+
+WHY PRINT-TO-PDF
+This uses the browser's native PDF rendering rather than an external JavaScript PDF library.
+That keeps the GitHub Pages app simple, reliable, and free of third-party dependencies.
 
 DEPLOY
-1. Replace index.html, styles.css, and app.js in your project.
-2. Keep the folder name exactly `data` (lowercase).
-3. Commit and push to GitHub.
-4. Wait for GitHub Pages deployment.
-5. Hard-refresh the page.
+1. Replace index.html, styles.css and app.js.
+2. Commit and push.
+3. Wait for GitHub Pages deployment.
+4. Hard-refresh the page.

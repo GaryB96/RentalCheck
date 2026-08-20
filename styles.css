@@ -150,3 +150,37 @@ button,input,textarea,select{font:inherit}
   .modal-backdrop{padding:8px;align-items:flex-end}
   .modal-card{max-height:92vh;border-radius:14px 14px 0 0}
 }
+
+
+/* ---------- Export ---------- */
+.export-modal-card{max-width:620px}
+.export-options{padding:16px 20px 4px}
+.export-option{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:10px;
+  font-weight:600;
+  padding:8px 0;
+  margin:0;
+}
+.export-option input{width:22px;height:22px;flex:0 0 auto}
+.export-help{
+  margin:10px 20px;
+  padding:12px 14px;
+  background:#f4f7fa;
+  border-left:4px solid #657b8e;
+  border-radius:7px;
+  font-size:.88rem;
+  line-height:1.45;
+}
+.modal-footer{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  padding:14px 20px 18px;
+  border-top:1px solid var(--border);
+}
+@media(max-width:760px){
+  .modal-footer{display:grid;grid-template-columns:1fr 1fr}
+}

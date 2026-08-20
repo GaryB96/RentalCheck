@@ -40,6 +40,7 @@
       <button id="newInspection" class="secondary-button" type="button">New</button>
       <button id="openInspection" class="secondary-button" type="button">Open</button>
       <button id="saveInspection" class="primary-button" type="button">Save</button>
+      <button id="exportInspection" class="primary-button" type="button">Export PDF</button>
     </div>
   </div>
 </header>
@@ -274,6 +275,47 @@
     <div id="savedInspectionsList" class="saved-inspections-list"></div>
     <div id="noSavedInspections" class="empty-state hidden">
       No saved inspections yet.
+    </div>
+  </div>
+</div>
+
+
+<div id="exportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+  <div class="modal-card export-modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 id="exportTitle">Export Inspection Report</h2>
+        <p>Create a clean report from the current inspection.</p>
+      </div>
+      <button id="closeExportModal" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="export-options">
+      <label class="export-option">
+        <input type="checkbox" id="exportIncludeSatisfactory" checked>
+        Include satisfactory items
+      </label>
+      <label class="export-option">
+        <input type="checkbox" id="exportIncludeNA">
+        Include N/A and Not Inspected items
+      </label>
+      <label class="export-option">
+        <input type="checkbox" id="exportIncludePhotos" checked>
+        Include photos
+      </label>
+      <label class="export-option">
+        <input type="checkbox" id="exportIncludeGuidance">
+        Include inspector/code guidance notes
+      </label>
+    </div>
+
+    <div class="export-help">
+      <p><strong>On iPad:</strong> tap <strong>Create PDF Report</strong>. In the print preview, pinch outward on the preview to open the PDF, then use the Share button to save it to Files, iCloud Drive, OneDrive, email, etc.</p>
+    </div>
+
+    <div class="modal-footer">
+      <button id="cancelExport" class="secondary-button" type="button">Cancel</button>
+      <button id="createPdfReport" class="primary-button" type="button">Create PDF Report</button>
     </div>
   </div>
 </div>
