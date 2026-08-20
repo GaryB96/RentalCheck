@@ -34,13 +34,17 @@
       <p class="important-note"><strong>Important:</strong> Current codes are reference standards where applicable. An existing building is not necessarily required to comply retrospectively with every provision that applies to new construction. Use <strong>R — Further Review Required</strong> where applicability cannot reasonably be determined during the visual inspection.</p>
     </div>
   </div>
-  <div class="header-actions">
-    <button id="newInspection" class="secondary-button" type="button">New</button>
-    <button id="saveInspection" class="primary-button" type="button">Save</button>
+  <div class="header-actions-wrap">
+    <div id="currentInspectionLabel" class="current-inspection-label">New inspection</div>
+    <div class="header-actions">
+      <button id="newInspection" class="secondary-button" type="button">New</button>
+      <button id="openInspection" class="secondary-button" type="button">Open</button>
+      <button id="saveInspection" class="primary-button" type="button">Save</button>
+    </div>
   </div>
 </header>
 
-<div id="saveNotice" class="save-notice hidden">Inspection saved on this device.</div>
+<div id="saveNotice" class="save-notice hidden">Inspection saved.</div>
 
 <main class="inspection-container">
   <section class="legend-card">
@@ -251,6 +255,28 @@
     </div>
   </section>
 </main>
+
+
+<div id="openInspectionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="openInspectionTitle">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 id="openInspectionTitle">Saved Inspections</h2>
+        <p>Saved locally on this device in this browser.</p>
+      </div>
+      <button id="closeOpenModal" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="saved-toolbar">
+      <input id="savedInspectionSearch" type="search" placeholder="Search by address, owner, or inspector">
+    </div>
+
+    <div id="savedInspectionsList" class="saved-inspections-list"></div>
+    <div id="noSavedInspections" class="empty-state hidden">
+      No saved inspections yet.
+    </div>
+  </div>
+</div>
 
 <template id="inspectionItemTemplate">
   <article class="inspection-item">
