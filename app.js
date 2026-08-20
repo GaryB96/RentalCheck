@@ -720,7 +720,7 @@ function blobToDataURL(blob) {
   });
 }
 
-async function buildReportHTML(options) {
+async function buildReportMarkup(options) {
   const address = qs("#propertyAddress")?.value?.trim() || "Untitled Property";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
@@ -738,23 +738,22 @@ async function buildReportHTML(options) {
 
     const items = getExportableItems(section, options);
 
-    // Collect subsection choice groups that are useful in the fire section.
     const choiceGroups = [];
     if (title.startsWith("7.")) {
       [...section.querySelectorAll(".subsection")].forEach(sub => {
         const subTitle = sub.querySelector("h3")?.textContent?.trim();
         const choices = getSelectedChoices(sub);
-        if (subTitle && choices.length) {
-          choiceGroups.push({ title: subTitle, choices });
-        }
+        if (subTitle && choices.length) choiceGroups.push({ title: subTitle, choices });
       });
     }
 
     if (!items.length && !choiceGroups.length) continue;
 
     const rows = [];
+
     for (const item of items) {
       let photoHTML = "";
+
       if (options.includePhotos && item.photoBlob) {
         try {
           const src = await blobToDataURL(item.photoBlob);
@@ -784,6 +783,7 @@ async function buildReportHTML(options) {
       </div>`).join("");
 
     let guidanceHTML = "";
+
     if (options.includeGuidance) {
       const notes = [...section.querySelectorAll(".guidance p, .code-reference p")]
         .map(p => p.textContent.replace(/\s+/g, " ").trim())
@@ -807,12 +807,13 @@ async function buildReportHTML(options) {
       </section>`);
   }
 
-  // Summary
   const summarySection = qs('[data-section="summary"]');
+
   const summaryFields = [...summarySection.querySelectorAll("label")]
     .map(label => {
       const ta = label.querySelector("textarea");
       if (!ta || !ta.value.trim()) return null;
+
       return {
         label: readLabelText(label),
         value: ta.value.trim()
@@ -843,185 +844,58 @@ async function buildReportHTML(options) {
         </div>` : ""}
     </section>`;
 
-  const generated = new Date();
   const generatedText = new Intl.DateTimeFormat("en-CA", {
     dateStyle: "medium",
     timeStyle: "short"
-  }).format(generated);
+  }).format(new Date());
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Inspection Report - ${escapeHTML(address)}</title>
-<style>
-  @page { size: letter; margin: 0.55in; }
-  * { box-sizing: border-box; }
-  body {
-    margin:0;
-    font-family: Arial, Helvetica, sans-serif;
-    color:#20262c;
-    font-size:10.5pt;
-    line-height:1.38;
-    background:white;
-  }
-  .report-header {
-    border-bottom:3px solid #303840;
-    padding-bottom:12px;
-    margin-bottom:16px;
-  }
-  .report-header h1 {
-    margin:0 0 3px;
-    font-size:19pt;
-  }
-  .report-header .subtitle {
-    color:#5d6872;
-    font-size:10pt;
-    margin-bottom:10px;
-  }
-  .property-grid {
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:7px 20px;
-    font-size:9.5pt;
-  }
-  .property-row strong { display:inline-block; min-width:118px; }
-  .standards {
-    margin-top:12px;
-    padding:8px 10px;
-    background:#f2f4f6;
-    border-left:4px solid #697987;
-    font-size:8.8pt;
-  }
-  .report-section {
-    page-break-inside:auto;
-    margin:0 0 16px;
-  }
-  .report-section h2 {
-    font-size:13pt;
-    margin:0 0 8px;
-    padding-bottom:4px;
-    border-bottom:1px solid #aeb5bb;
-  }
-  .report-item {
-    border:1px solid #d5d9dd;
-    border-left:5px solid #8e989f;
-    padding:7px 9px;
-    margin:0 0 6px;
-    page-break-inside:avoid;
-  }
-  .report-item.status-D { border-left-color:#a97100; }
-  .report-item.status-IC { border-left-color:#a63030; }
-  .report-item.status-R { border-left-color:#476aa6; }
-  .report-item.status-S { border-left-color:#46764b; }
-  .report-item-top {
-    display:flex;
-    justify-content:space-between;
-    gap:18px;
-    align-items:flex-start;
-  }
-  .report-item-title { font-weight:700; }
-  .report-status {
-    flex-shrink:0;
-    font-size:8.8pt;
-    font-weight:700;
-    color:#4c5660;
-  }
-  .report-observation {
-    margin-top:5px;
-    padding-top:5px;
-    border-top:1px dotted #c5c9cd;
-  }
-  .report-photo { margin-top:8px; }
-  .report-photo img {
-    max-width:4.8in;
-    max-height:3.5in;
-    object-fit:contain;
-    border:1px solid #cbd0d4;
-  }
-  .report-choice-group {
-    margin:0 0 7px;
-    padding:6px 8px;
-    background:#f6f7f8;
-    font-size:9pt;
-  }
-  .report-guidance {
-    margin-top:9px;
-    padding:8px 10px;
-    border-left:4px solid #60788d;
-    background:#f7f9fa;
-    font-size:8.8pt;
-    page-break-inside:avoid;
-  }
-  .report-guidance p { margin:4px 0; }
-  .summary-block {
-    margin:0 0 10px;
-    page-break-inside:avoid;
-  }
-  .summary-block h3 {
-    margin:0 0 3px;
-    font-size:10.5pt;
-  }
-  .summary-block p { margin:0; }
-  .overall-risk {
-    margin-top:12px;
-    padding:10px;
-    border:2px solid #4c5964;
-    font-size:11pt;
-  }
-  .report-footer {
-    margin-top:18px;
-    padding-top:8px;
-    border-top:1px solid #c8cdd1;
-    font-size:8pt;
-    color:#66717a;
-  }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-</style>
-</head>
-<body>
-  <header class="report-header">
-    <h1>PEI Mutual Residential Rental Inspection</h1>
-    <div class="subtitle">Existing Residential Rental Building — Insurance Risk Inspection Report</div>
+  return `
+    <header class="report-header">
+      <h1>PEI Mutual Residential Rental Inspection</h1>
+      <div class="subtitle">Existing Residential Rental Building — Insurance Risk Inspection Report</div>
 
-    <div class="property-grid">
-      <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
-      <div class="property-row"><strong>Owner / Insured:</strong> ${escapeHTML(owner)}</div>
-      <div class="property-row"><strong>Inspection Date:</strong> ${escapeHTML(formatInspectionDate(date))}</div>
-      <div class="property-row"><strong>Inspector:</strong> ${escapeHTML(inspector)}</div>
-      <div class="property-row"><strong>Building Type:</strong> ${escapeHTML(buildingType)}</div>
-      <div class="property-row"><strong>Year Constructed:</strong> ${escapeHTML(year)}</div>
-      <div class="property-row"><strong>Dwelling Units:</strong> ${escapeHTML(units)}</div>
-      <div class="property-row"><strong>Storeys:</strong> ${escapeHTML(storeys)}</div>
-    </div>
+      <div class="property-grid">
+        <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
+        <div class="property-row"><strong>Owner / Insured:</strong> ${escapeHTML(owner)}</div>
+        <div class="property-row"><strong>Inspection Date:</strong> ${escapeHTML(formatInspectionDate(date))}</div>
+        <div class="property-row"><strong>Inspector:</strong> ${escapeHTML(inspector)}</div>
+        <div class="property-row"><strong>Building Type:</strong> ${escapeHTML(buildingType)}</div>
+        <div class="property-row"><strong>Year Constructed:</strong> ${escapeHTML(year)}</div>
+        <div class="property-row"><strong>Dwelling Units:</strong> ${escapeHTML(units)}</div>
+        <div class="property-row"><strong>Storeys:</strong> ${escapeHTML(storeys)}</div>
+      </div>
 
-    <div class="standards">
-      <strong>Current reference standards:</strong>
-      NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024).
-      Current codes are used as reference standards where applicable; an existing building is not
-      necessarily required to comply retrospectively with every provision applicable to new construction.
-    </div>
-  </header>
+      <div class="standards">
+        <strong>Current reference standards:</strong>
+        NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024).
+        Current codes are used as reference standards where applicable; an existing building is not
+        necessarily required to comply retrospectively with every provision applicable to new construction.
+      </div>
+    </header>
 
-  ${sectionBlocks.join("")}
-  ${summaryHTML}
+    ${sectionBlocks.join("")}
+    ${summaryHTML}
 
-  <footer class="report-footer">
-    Report generated ${escapeHTML(generatedText)}. This report documents a visual insurance risk inspection
-    and does not constitute certification of compliance with applicable building, fire, electrical, plumbing,
-    or other codes.
-  </footer>
+    <footer class="report-footer">
+      Report generated ${escapeHTML(generatedText)}. This report documents a visual insurance risk inspection
+      and does not constitute certification of compliance with applicable building, fire, electrical, plumbing,
+      or other codes.
+    </footer>`;
+}
 
-<script>
-  window.addEventListener("load", () => {
-    setTimeout(() => window.print(), 400);
-  });
-</script>
-</body>
-</html>`;
+function waitForReportImages(container) {
+  const images = [...container.querySelectorAll("img")];
+
+  if (!images.length) return Promise.resolve();
+
+  return Promise.all(images.map(img => {
+    if (img.complete) return Promise.resolve();
+
+    return new Promise(resolve => {
+      img.addEventListener("load", resolve, { once: true });
+      img.addEventListener("error", resolve, { once: true });
+    });
+  }));
 }
 
 async function createPdfReadyReport() {
@@ -1032,36 +906,45 @@ async function createPdfReadyReport() {
     includeGuidance: qs("#exportIncludeGuidance").checked
   };
 
-  // Save current changes first so the report and saved record match.
   try {
     await saveCurrentInspection(false);
   } catch (e) {
     console.warn("Could not save before export.", e);
   }
 
-  const reportWindow = window.open("", "_blank");
-  if (!reportWindow) {
-    alert("The report window was blocked. Please allow pop-ups for this site and try again.");
-    return;
-  }
-
-  reportWindow.document.write(`
-    <!DOCTYPE html><html><head><title>Preparing report…</title></head>
-    <body style="font-family:Arial;padding:30px">Preparing inspection report…</body></html>
-  `);
-  reportWindow.document.close();
+  const host = qs("#printReportHost");
 
   try {
-    const html = await buildReportHTML(options);
-    reportWindow.document.open();
-    reportWindow.document.write(html);
-    reportWindow.document.close();
+    host.innerHTML = await buildReportMarkup(options);
+    host.setAttribute("aria-hidden", "false");
+
+    await waitForReportImages(host);
+
     closeExportModal();
+
+    document.body.classList.add("printing-report");
+
+    // Give iOS/Chrome/WebKit one rendering frame before invoking native print.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+      });
+    });
+
   } catch (error) {
     console.error(error);
-    reportWindow.close();
+    document.body.classList.remove("printing-report");
+    host.innerHTML = "";
+    host.setAttribute("aria-hidden", "true");
     alert("The inspection report could not be created.");
   }
+}
+
+function cleanupAfterPrint() {
+  const host = qs("#printReportHost");
+  document.body.classList.remove("printing-report");
+  host.innerHTML = "";
+  host.setAttribute("aria-hidden", "true");
 }
 
 function openExportModal() {
@@ -1136,6 +1019,16 @@ function wireInputs() {
     if (event.key !== "Escape") return;
     if (!qs("#openInspectionModal").classList.contains("hidden")) closeOpenModal();
     if (!qs("#exportModal").classList.contains("hidden")) closeExportModal();
+  });
+
+  window.addEventListener("afterprint", cleanupAfterPrint);
+
+  // Safari/iOS can be inconsistent about afterprint, so visibility restoration
+  // also cleans up after returning from the native print sheet.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && document.body.classList.contains("printing-report")) {
+      setTimeout(cleanupAfterPrint, 500);
+    }
   });
 }
 
