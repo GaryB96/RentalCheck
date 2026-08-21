@@ -1300,18 +1300,105 @@ async function generateInspectionPdf(options) {
   };
 }
 
-async function shareOrDownloadPdf(result) {
-  const file = new File([result.blob], result.filename, { type: "application/pdf" });
+
+function fileExtensionFromBlob(blob) {
+  const type = (blob?.type || "").toLowerCase();
+  if (type.includes("png")) return "png";
+  if (type.includes("webp")) return "webp";
+  if (type.includes("heic") || type.includes("heif")) return "heic";
+  return "jpg";
+}
+
+function collectOriginalPhotoFiles() {
+  const address = qs("#propertyAddress")?.value?.trim() || "";
+  const owner = qs("#ownerInsured")?.value?.trim() || "";
+  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0,10);
+
+  const prefixParts = [];
+  if (owner) prefixParts.push(owner);
+  if (address) prefixParts.push(address);
+  prefixParts.push(date);
+
+  const prefix = safeFileName(prefixParts.join(" - "));
+  const photos = [];
+  let overallPhotoNumber = 1;
+
+  qsa(".inspection-section").forEach(section => {
+    const sectionTitle = getSectionTitle(section)
+      .replace(/^\d+\.\s*/, "")
+      .trim();
+
+    [...section.querySelectorAll(".inspection-item")].forEach(article => {
+      const blob = article._photoBlob;
+      if (!blob) return;
+
+      const itemTitle = article.querySelector(".item-title")?.textContent?.trim() || "Inspection Photo";
+      const extension = fileExtensionFromBlob(blob);
+      const number = String(overallPhotoNumber).padStart(2, "0");
+
+      const filename = safeFileName(
+        `${prefix} - Photo ${number} - ${sectionTitle} - ${itemTitle}`
+      ) + `.${extension}`;
+
+      photos.push(new File([blob], filename, {
+        type: blob.type || "image/jpeg",
+        lastModified: Date.now()
+      }));
+
+      overallPhotoNumber++;
+    });
+  });
+
+  return photos;
+}
+
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function shareOrDownloadPdf(result, originalPhotoFiles = []) {
+  const pdfFile = new File([result.blob], result.filename, {
+    type: "application/pdf"
+  });
+
+  const allFiles = [pdfFile, ...originalPhotoFiles];
 
   if (navigator.share && navigator.canShare) {
     try {
       const shareData = {
         title: result.title,
         text: "Residential rental inspection report",
-        files: [file]
+        files: allFiles
       };
+
       if (navigator.canShare(shareData)) {
         await navigator.share(shareData);
+        return "shared";
+      }
+
+      // Some iOS/WebKit versions may reject a mixed PDF + image share
+      // even though sharing a single file works. Fall back to PDF-only share.
+      const pdfOnly = {
+        title: result.title,
+        text: "Residential rental inspection report",
+        files: [pdfFile]
+      };
+
+      if (navigator.canShare(pdfOnly)) {
+        await navigator.share(pdfOnly);
+
+        if (originalPhotoFiles.length) {
+          originalPhotoFiles.forEach(downloadFile);
+          return "shared-pdf-photos-downloaded";
+        }
+
         return "shared";
       }
     } catch (error) {
@@ -1320,14 +1407,9 @@ async function shareOrDownloadPdf(result) {
     }
   }
 
-  const url = URL.createObjectURL(result.blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = result.filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  // Fallback: download each file separately.
+  downloadFile(pdfFile);
+  originalPhotoFiles.forEach(downloadFile);
   return "downloaded";
 }
 
@@ -1336,6 +1418,7 @@ async function createPdfReadyReport() {
     includeSatisfactory: qs("#exportIncludeSatisfactory").checked,
     includeNA: qs("#exportIncludeNA").checked,
     includePhotos: qs("#exportIncludePhotos").checked,
+    includeOriginalPhotos: qs("#exportIncludeOriginalPhotos")?.checked ?? true,
     includeGuidance: qs("#exportIncludeGuidance").checked
   };
 
@@ -1348,15 +1431,25 @@ async function createPdfReadyReport() {
     await saveCurrentInspection(false);
 
     const result = await generateInspectionPdf(options);
-    button.textContent = "Opening Share Sheet…";
-    const outcome = await shareOrDownloadPdf(result);
+    const originalPhotoFiles = options.includeOriginalPhotos
+      ? collectOriginalPhotoFiles()
+      : [];
+
+    button.textContent = originalPhotoFiles.length
+      ? `Sharing PDF + ${originalPhotoFiles.length} photo${originalPhotoFiles.length === 1 ? "" : "s"}…`
+      : "Opening Share Sheet…";
+
+    const outcome = await shareOrDownloadPdf(result, originalPhotoFiles);
 
     if (outcome === "shared") {
       closeExportModal();
-      showSaveNotice("PDF shared.");
+      showSaveNotice("PDF and selected files shared.");
+    } else if (outcome === "shared-pdf-photos-downloaded") {
+      closeExportModal();
+      showSaveNotice("PDF shared; original photos downloaded separately.");
     } else if (outcome === "downloaded") {
       closeExportModal();
-      showSaveNotice("PDF downloaded.");
+      showSaveNotice("PDF and selected files downloaded.");
     }
   } catch (error) {
     console.error("PDF export failed:", error);

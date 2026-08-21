@@ -327,3 +327,12 @@ select{
 .legend-grid span:nth-child(4){color:#7042a3}
 .legend-grid span:nth-child(5){color:#606b74}
 .legend-grid span:nth-child(6){color:#246bc9}
+
+
+/* ---------- Original photo export option ---------- */
+.export-options .export-option{
+  align-items:flex-start;
+}
+.export-options .export-option input{
+  margin-top:1px;
+}
