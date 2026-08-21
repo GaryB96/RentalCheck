@@ -386,3 +386,49 @@ select{
   border-color:#1f65be !important;
   outline:3px solid rgba(44,126,232,.32) !important;
 }
+
+
+/* ---------- Camera / Photo Library controls v8 ---------- */
+.photo-row{
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+
+.photo-button{
+  min-width:150px;
+  justify-content:center;
+  font-weight:700;
+}
+
+.photo-button:active{
+  transform:translateY(1px);
+}
+
+@media(max-width:760px){
+  .photo-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .photo-row .remove-photo{
+    grid-column:1 / -1;
+  }
+
+  .photo-button{
+    width:100%;
+    min-width:0;
+    justify-content:center;
+    min-height:48px;
+  }
+}
+
+@media(max-width:460px){
+  .photo-row{
+    grid-template-columns:1fr;
+  }
+
+  .photo-row .remove-photo{
+    grid-column:auto;
+  }
+}

@@ -14,7 +14,7 @@
     <p class="subtitle">Prince Edward Island — Existing Residential Rental Buildings</p>
     <p class="standards-line">
       <strong>Current reference standards:</strong>
-      NBC (2020) · NFC (2020) · CEC (2024) · NPC (2020) · NFPA 1 (2024) · NFPA 101 (2024)
+      NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024)
     </p>
     <button id="standardsToggle" class="text-button" type="button">About the standards ▾</button>
     <div id="standardsPanel" class="standards-panel hidden">
@@ -345,7 +345,14 @@
     <div class="deficiency-details hidden">
       <label>Observation / Deficiency<textarea rows="3" class="observation" placeholder="Describe the observed condition…"></textarea></label>
       <div class="photo-row">
-        <label class="photo-button">Add Photo<input type="file" accept="image/*" capture="environment" class="photo-input"></label>
+        <label class="photo-button">
+          Take Photo
+          <input type="file" accept="image/*" capture="environment" class="photo-input camera-input">
+        </label>
+        <label class="photo-button">
+          Choose from Library
+          <input type="file" accept="image/*" class="photo-input library-input">
+        </label>
         <button class="remove-photo secondary-button hidden" type="button">Remove Photo</button>
       </div>
       <div class="photo-preview"></div>

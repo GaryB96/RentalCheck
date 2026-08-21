@@ -169,12 +169,13 @@ function createInspectionItem(title, guidance = "") {
     });
   });
 
-  const input = node.querySelector(".photo-input");
+  const cameraInput = node.querySelector(".camera-input");
+  const libraryInput = node.querySelector(".library-input");
   const preview = node.querySelector(".photo-preview");
   const remove = node.querySelector(".remove-photo");
 
-  input.addEventListener("change", async () => {
-    const file = input.files?.[0];
+  async function handleSelectedPhoto(inputElement) {
+    const file = inputElement.files?.[0];
     if (!file) return;
 
     clearArticlePreview(article);
@@ -186,14 +187,22 @@ function createInspectionItem(title, guidance = "") {
     article._photoNormalized = article._photoBlob?.type === "image/jpeg";
 
     renderPhoto(article, article._photoBlob);
+
+    if (inputElement === cameraInput && libraryInput) libraryInput.value = "";
+    if (inputElement === libraryInput && cameraInput) cameraInput.value = "";
+
     markDirty();
-  });
+  }
+
+  cameraInput?.addEventListener("change", () => handleSelectedPhoto(cameraInput));
+  libraryInput?.addEventListener("change", () => handleSelectedPhoto(libraryInput));
 
   remove.addEventListener("click", () => {
     clearArticlePreview(article);
     article._photoBlob = null;
     article._photoName = "";
-    input.value = "";
+    if (cameraInput) cameraInput.value = "";
+    if (libraryInput) libraryInput.value = "";
     remove.classList.add("hidden");
     markDirty();
   });
@@ -421,8 +430,9 @@ function restoreItems(items = []) {
     clearArticlePreview(article);
     article._photoBlob = null;
     article._photoName = "";
-    const input = article.querySelector(".photo-input");
-    if (input) input.value = "";
+    article.querySelectorAll(".photo-input").forEach(input => {
+      input.value = "";
+    });
     article.querySelector(".remove-photo")?.classList.add("hidden");
   });
 
