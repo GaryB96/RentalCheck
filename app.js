@@ -1586,7 +1586,6 @@ async function shareOrDownloadPdf(result, originalPhotoFiles = []) {
       try {
         const shareData = {
           title: result.title,
-          text: "Residential rental inspection report package",
           files: [zipFile]
         };
 
