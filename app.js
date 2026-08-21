@@ -721,7 +721,7 @@ function blobToDataURL(blob) {
 }
 
 async function buildReportHTML(options) {
-  const address = qs("#propertyAddress")?.value?.trim() || "Untitled Property";
+  const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
   const inspector = qs("#inspector")?.value?.trim() || "";
@@ -1052,7 +1052,7 @@ async function generateInspectionPdf(options) {
   const bottom = pageHeight - 42;
   let y = margin;
 
-  const address = qs("#propertyAddress")?.value?.trim() || "Untitled Property";
+  const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
   const inspector = qs("#inspector")?.value?.trim() || "";
@@ -1148,7 +1148,7 @@ async function generateInspectionPdf(options) {
           .map(p => p.textContent.replace(/\s+/g, " ").trim()).filter(Boolean)
       : [];
 
-    if (!items.length && !choiceGroups.length && !guidanceNotes.length) continue;
+    if (!items.length && !choiceGroups.length) continue;
 
     addHeading(title);
 
@@ -1228,30 +1228,39 @@ async function generateInspectionPdf(options) {
   }
 
   const summarySection = qs('[data-section="summary"]');
-  addHeading("19. Inspection Summary");
 
-  [...summarySection.querySelectorAll("label")].forEach(label => {
-    const ta = label.querySelector("textarea");
-    if (!ta || !ta.value.trim()) return;
-    addText(readLabelText(label), margin, { size: 9, style: "bold", lineHeight: 1.08 });
-    addText(ta.value.trim(), margin + 8, { size: 8.5, maxWidth: contentWidth - 8, lineHeight: 1.2 });
-    y += 5;
-  });
+  const summaryEntries = [...summarySection.querySelectorAll("label")]
+    .map(label => {
+      const ta = label.querySelector("textarea");
+      if (!ta || !ta.value.trim()) return null;
+      return { label: readLabelText(label), value: ta.value.trim() };
+    })
+    .filter(Boolean);
 
   const overallRisk = getSelectedChoices(summarySection).find(x =>
     ["Acceptable", "Acceptable subject to recommendations", "Deficiencies requiring correction",
      "Significant deficiencies", "Further specialist assessment required"].includes(x)
   );
 
-  if (overallRisk) {
-    ensureSpace(36);
-    doc.setDrawColor(70);
-    doc.rect(margin, y, contentWidth, 28);
-    y += 18;
-    addText(`Overall Insurance Risk: ${overallRisk}`, margin + 8, {
-      size: 10, style: "bold", maxWidth: contentWidth - 16
+  if (summaryEntries.length || overallRisk) {
+    addHeading("19. Inspection Summary");
+
+    summaryEntries.forEach(entry => {
+      addText(entry.label, margin, { size: 9, style: "bold", lineHeight: 1.08 });
+      addText(entry.value, margin + 8, { size: 8.5, maxWidth: contentWidth - 8, lineHeight: 1.2 });
+      y += 5;
     });
-    y += 8;
+
+    if (overallRisk) {
+      ensureSpace(36);
+      doc.setDrawColor(70);
+      doc.rect(margin, y, contentWidth, 28);
+      y += 18;
+      addText(`Overall Insurance Risk: ${overallRisk}`, margin + 8, {
+        size: 10, style: "bold", maxWidth: contentWidth - 16
+      });
+      y += 8;
+    }
   }
 
   const pages = doc.getNumberOfPages();
@@ -1272,10 +1281,22 @@ async function generateInspectionPdf(options) {
   });
 
   const dateForName = date || new Date().toISOString().slice(0, 10);
+
+  const filenameParts = [];
+  if (owner) filenameParts.push(owner);
+  if (address) filenameParts.push(address);
+  filenameParts.push("Rental Inspection");
+  filenameParts.push(dateForName);
+
+  const shareTitleParts = [];
+  if (owner) shareTitleParts.push(owner);
+  if (address) shareTitleParts.push(address);
+  shareTitleParts.push("Residential Rental Inspection");
+
   return {
     blob: doc.output("blob"),
-    filename: safeFileName(`${address} - Rental Inspection - ${dateForName}`) + ".pdf",
-    title: `${address} Residential Rental Inspection`
+    filename: safeFileName(filenameParts.join(" - ")) + ".pdf",
+    title: shareTitleParts.join(" - ")
   };
 }
 
