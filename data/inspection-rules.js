@@ -13,8 +13,7 @@ const inspectionRules = {
 
 const inspectionSectionsBeforeFire = [
   { number: 2, title: "Exterior / Site", items: [
-    "Walkways reasonably level and free from significant trip hazards","Steps stable and in good repair","Exterior handrails secure",
-    "Guards secure","Exterior lighting operational","Site drainage appears adequate","Water directed away from foundation",
+    "Walkways reasonably level and free from significant trip hazards","Exterior lighting operational","Site drainage appears adequate","Water directed away from foundation",
     "No significant standing water","Trees / limbs do not present obvious building hazard","Retaining walls stable",
     "No significant accumulation of combustible debris","Garbage / recycling storage appropriate","Property reasonably maintained",
     "Foundation appears structurally sound","No significant displacement / bowing","No major cracking requiring further assessment",
@@ -31,7 +30,7 @@ const inspectionSectionsBeforeFire = [
     "Windows in good repair","No broken glass","Operable windows function where tested","Exterior doors in good repair",
     "Exterior doors close / latch securely","Unit entrance locks operational","No significant water penetration around openings"
   ]},
-  { number: 5, title: "Decks / Balconies / Stairs / Guards", guidance: "Assess current physical condition and fall risk rather than automatically applying current NBC dimensions to original construction.", items: [
+  { number: 5, title: "Decks / Balconies / Stairs / Guards", guidance: "Assess current physical condition, structural stability and fall risk. Do not automatically apply current NBC dimensions to original construction unless the current Code is actually triggered by alteration, change of use or another applicable provision. Use <strong>Further Review Required</strong> when the condition is unsafe or Code applicability cannot be established visually. <span class='guidance-links'><a href='https://www.nrc.canada.ca/en/certifications-evaluations-standards/codes-canada/codes-canada-publications/national-building-code-canada-2020' target='_blank' rel='noopener'>NBC 2020</a></span>", items: [
     "Structure appears stable","No significant rot / corrosion","Connections appear secure","Decking / treads secure","No significant trip hazards",
     "Stairs stable","Handrails secure","Guards secure","No obviously hazardous openings / damage","Balcony / deck attachment to building appears sound",
     "No evidence of structural movement","No apparent overloading / deterioration"
@@ -46,16 +45,16 @@ const inspectionSectionsBeforeFire = [
 const fireItems = {
   smoke: ["Alarms securely mounted","Alarms tested and operational where testing is within inspection scope","No visibly disabled, disconnected or damaged alarms","Alarm appears within manufacturer's stated service life"],
   co: ["CO alarm / detector outside sleeping area where applicable","CO alarm / detector on applicable occupiable levels","Alarm / detector tested where within inspection scope","Unit appears within manufacturer's service life"],
-  egress: ["Required exit routes appear available","Exit routes clear and unobstructed","Exit doors operational","Exit doors readily openable from egress side","No obvious inappropriate locking arrangement","Common corridors unobstructed","Common stairs unobstructed","Exterior exit routes usable","Exit stairs / landings appear maintained","Required exit signage appears present where applicable","Emergency lighting appears present / operational where applicable","Secondary egress windows present where applicable","No obvious obstruction of required egress windows"],
+  egress: ["Required exit routes appear available","Required exit routes, including common corridors and stairs, clear and unobstructed","Exit doors operational","Exit doors readily openable from egress side","No obvious inappropriate locking arrangement","Exterior exit routes usable","Exit stairs / landings appear maintained","Required exit signage appears present where applicable","Emergency lighting appears present / operational where applicable","Secondary egress windows present where applicable","No obvious obstruction of required egress windows"],
   separations: ["No obvious openings or damage in apparent fire separations","Walls / ceilings separating dwelling units appear intact","Walls / ceilings separating dwelling units from common areas appear intact","No obvious unprotected service penetrations","Doors in apparent fire separations are present and serviceable","Fire-rated / self-closing doors function where provided / required","Fire doors not wedged or improperly held open","Mechanical / furnace rooms appear appropriately separated where applicable"],
   alarm: ["Fire alarm system present when indicated by applicability screen","Manual pull stations present where required by system design","Audible / visual notification equipment observed","Fire alarm control panel shows no visible trouble / supervisory condition","No obvious system damage or impairment","Current inspection / service information observed"],
   sprinklers: ["Installed sprinkler system appears to serve intended areas","Sprinkler control valves accessible","Valves appear in normal / open position","No obvious damaged sprinkler heads","No obvious obstruction / inappropriate storage around heads","No obvious leakage / corrosion","Inspection / service information or tag observed","Fire department connection accessible where provided"],
   extinguishers: ["Extinguishers readily accessible where required / provided","Appropriate location / mounting","Access unobstructed","No obvious physical damage","Pressure / status indicator appears normal where applicable","Inspection / service tag present where applicable","Servicing appears current"],
-  firehazards: ["Exit routes free of combustible storage","Electrical / mechanical rooms free of inappropriate storage","Combustibles adequately separated from heat-producing equipment","No excessive accumulation of combustible materials","Flammable / combustible liquids not obviously stored unsafely","Utility areas reasonably maintained","No obvious ignition-source / fire-load concern"]
+  firehazards: ["Electrical / mechanical rooms free of inappropriate storage","Combustibles adequately separated from heat-producing equipment","No excessive accumulation of combustible materials","Flammable / combustible liquids not obviously stored unsafely","Utility areas reasonably maintained","No obvious ignition-source / fire-load concern"]
 };
 
 const inspectionSectionsAfterFire = [
-  { number: 8, title: "Electrical", guidance: "Visual insurance inspection — not an electrical-code certification.", items: [
+  { number: 8, title: "Electrical", guidance: "Visual insurance inspection only; do not remove energized covers or certify Code compliance. Flag visible overheating, exposed wiring, unsafe modifications, water exposure, or uncertain legacy wiring as <strong>Further Review Required</strong> when specialist assessment is appropriate. <span class='guidance-links'><a href='https://www.princeedwardisland.ca/en/legislation/electrical-inspection-act/electrical-inspection-and-code-regulations' target='_blank' rel='noopener'>PEI Electrical Inspection and Code Regulations</a></span>", items: [
     "Service equipment appears in good condition","Electrical panel accessible","Panel cover installed","No missing / open breaker positions",
     "No exposed energized components","No obvious overheating / scorching","No significant corrosion / moisture","Circuit identification present",
     "No obvious improper modifications","Electrical room / panel clearance adequate for safe access","Receptacles / switches securely mounted",
@@ -63,7 +62,7 @@ const inspectionSectionsAfterFire = [
     "Extension cords not used as apparent permanent wiring","No obvious overloaded receptacles / power bars",
     "GFCI protection observed in applicable wet locations","Exterior electrical equipment appears weather-protected"
   ]},
-  { number: 9, title: "Plumbing", items: [
+  { number: 9, title: "Plumbing", guidance: "Check observable supply, drainage, fixtures and water-heating components for leakage, deterioration, unsafe modifications and serviceability. This is not a plumbing-code certification; use <strong>Further Review Required</strong> where installation compliance cannot be established visually. <span class='guidance-links'><a href='https://www.princeedwardisland.ca/en/legislation/environmental-protection-act/a-code-for-plumbing-services-regulations' target='_blank' rel='noopener'>PEI A Code for Plumbing Services Regulations</a></span>", items: [
     "Hot and cold running water available","Water pressure appears adequate","No active supply leaks observed","No significant corrosion / deterioration",
     "Shutoff valves accessible where observed","Piping protected from freezing where applicable","Fixtures drain adequately","No active drain leaks",
     "No sewage leakage","No significant sewer odour","No obvious inappropriate plumbing modifications","Drain / vent piping appears adequately supported",
@@ -83,7 +82,7 @@ const inspectionSectionsAfterFire = [
     "No significant condensation","No obvious ongoing moisture damage","No significant visible mould-like growth","Bathroom ventilation adequate",
     "Kitchen ventilation adequate","No significant rot caused by moisture","Property appears reasonably weatherproof"
   ]},
-  { number: 13, title: "Rental Accommodation Standards", guidance: "PEI Public Health Act — Rental Accommodation Regulations.", items: [
+  { number: 13, title: "Rental Accommodation Standards", guidance: "Use this section as a minimum-health-standard screen for long-term rental accommodation: weatherproofing and dampness, adequate heat, potable hot/cold water, sanitary facilities, ventilation, garbage, pests and general habitability. PEI Environmental Health investigates concerns such as loss of heat or water, sewage issues, pest infestation and mould related to water damage. Use <strong>Further Review Required</strong> when a condition may require Public Health review or the requirement cannot be established visually. <span class='guidance-links'><a href='https://www.princeedwardisland.ca/en/legislation/public-health-act/rental-accommodation-regulations' target='_blank' rel='noopener'>Rental Accommodation Regulations</a> · <a href='https://www.princeedwardisland.ca/en/information/health-and-wellness/rental-accommodations-program' target='_blank' rel='noopener'>Rental Accommodations Program</a> · <a href='https://www.princeedwardisland.ca/en/legislation/residential-tenancy-act' target='_blank' rel='noopener'>Residential Tenancy Act</a></span>", items: [
     "Accommodation appears maintained in a safe and sanitary condition","Building / dwelling unit weatherproof","Free from significant dampness",
     "Heating equipment working and in good repair","Required heat available","Hot running potable water available","Cold running potable water available",
     "Water pressure adequate","Sanitary facilities operational","Bathroom appropriately ventilated","Kitchen facilities provided / operational as applicable",
@@ -106,11 +105,10 @@ const inspectionSectionsAfterFire = [
     "Area free of excessive combustible storage","Mechanical equipment accessible"
   ]},
   { number: 17, title: "Liability / General Hazards", items: [
-    "No significant slip / trip / fall hazards","Interior stairs reasonably safe","Exterior stairs reasonably safe","Handrails secure","Guards secure",
-    "Common-area lighting adequate","Snow / ice management considerations noted","Pools / hot tubs appropriately protected where applicable",
+    "No significant slip / trip / fall hazards","Common-area lighting adequate","Snow / ice management considerations noted","Pools / hot tubs appropriately protected where applicable",
     "Detached structures appear safe","No abandoned / unsafe structures","No obvious animal-related liability concern"
   ]},
-  { number: 18, title: "Alterations / Conditions Requiring Code Review", guidance: "An older component differing from today's construction standards does not by itself establish non-compliance.", items: [
+  { number: 18, title: "Alterations / Conditions Requiring Code Review", guidance: "An older component differing from today's construction standards does not by itself establish non-compliance. Use this section when alterations, additions, conversions, changes of use, incomplete work or current unsafe conditions suggest that regulatory or professional review may be warranted. Use <strong>Further Review Required</strong> rather than declaring a Code violation when applicability is uncertain. <span class='guidance-links'><a href='https://www.princeedwardisland.ca/en/legislation/provincial-building-code-act' target='_blank' rel='noopener'>PEI Provincial Building Code Act</a> · <a href='https://www.nrc.canada.ca/en/certifications-evaluations-standards/codes-canada/codes-canada-publications/national-building-code-canada-2020' target='_blank' rel='noopener'>NBC 2020</a></span>", items: [
     "Addition","Recent construction","Structural alteration","New dwelling unit","Basement conversion","Change in occupancy / use",
     "Significant electrical alteration","Significant plumbing alteration","Altered exits","Altered fire separations",
     "New deck / balcony / stairs","Work appearing incomplete / unprofessional","Current unsafe condition"

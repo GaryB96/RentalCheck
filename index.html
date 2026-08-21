@@ -20,7 +20,7 @@
     <p class="subtitle">Prince Edward Island — Existing Residential Rental Buildings</p>
     <p class="standards-line">
       <strong>Current reference standards:</strong>
-      NBC (2020) · NFC (2020) · CEC (2024) · NPC (2020) · NFPA 1 (2024) · NFPA 101 (2024)
+      NBC 2020 · NFC 2020 · CEC 2024 · NPC 2020 · NFPA 1 (2024) · NFPA 101 (2024)
     </p>
     <button id="standardsToggle" class="text-button" type="button">About the standards ▾</button>
     <div id="standardsPanel" class="standards-panel hidden">
@@ -156,13 +156,17 @@
   <div id="generatedSections"></div>
 
   <section class="inspection-section" data-section="fire">
-    <button class="section-header" type="button">
-      <span>7. Fire & Life Safety</span><span class="section-arrow">▶</span>
-    </button>
+    <div class="section-header-bar">
+      <button class="section-header" type="button">
+        <span>7. Fire & Life Safety</span><span class="section-arrow">▶</span>
+      </button>
+      <button class="section-na-button" type="button" title="Mark every rated item in this section Not Applicable">Section N/A</button>
+    </div>
     <div class="section-content collapsed">
       <details class="guidance">
         <summary>PEI Fire Code Framework</summary>
-        <p>PEI Fire Safety Regulations put NFC 2020, NFPA 1 (2024), and NFPA 101 (2024) in force. Record observable conditions and use R where applicability is uncertain.</p>
+        <p>PEI Fire Safety Regulations put NFC 2020, NFPA 1 (2024), and NFPA 101 (2024) in force. Record observable conditions and use <strong>Further Review Required</strong> where applicability is uncertain.</p>
+        <p class="guidance-links"><a href="https://www.princeedwardisland.ca/en/legislation/fire-safety-act/fire-safety-regulations" target="_blank" rel="noopener">PEI Fire Safety Regulations</a> · <a href="https://www.princeedwardisland.ca/en/legislation/fire-safety-act/fire-detection-and-fire-protection-system-regulations" target="_blank" rel="noopener">Fire Detection &amp; Fire Protection System Regulations</a> · <a href="https://nrc.canada.ca/en/certifications-evaluations-standards/codes-canada/codes-canada-publications/national-fire-code-canada-2020" target="_blank" rel="noopener">NFC 2020</a></p>
       </details>
 
       <div class="subsection">
@@ -203,6 +207,7 @@
         <details class="code-reference" open>
           <summary>Rule Used by This Tool</summary>
           <p>For an existing apartment building, the NFPA 101 Chapter 31 general screening trigger used here is <strong>4 or more storeys OR more than 11 dwelling units</strong>. Exceptions can apply based on separation and independent exits.</p>
+          <p class="guidance-links"><a href="https://www.princeedwardisland.ca/en/legislation/fire-safety-act/fire-safety-regulations" target="_blank" rel="noopener">PEI Fire Safety Regulations</a> · <a href="https://www.princeedwardisland.ca/en/legislation/fire-safety-act/fire-detection-and-fire-protection-system-regulations" target="_blank" rel="noopener">PEI Fire Detection &amp; Fire Protection System Regulations</a></p>
         </details>
         <div class="choice-grid">
           <label><input type="checkbox"> Exception may apply based on observed configuration</label>
@@ -221,7 +226,7 @@
           <label><input type="radio" name="sprinklerPresence"> Unable to determine</label>
         </div>
         <details class="guidance"><summary>Inspector Guidance</summary>
-          <p>For an ordinary existing low-rise apartment building, “No sprinkler system observed” should not automatically receive D. Use R when characteristics suggest further review.</p>
+          <p>For an ordinary existing low-rise apartment building, “No sprinkler system observed” should not automatically receive D. Use <strong>Further Review Required</strong> when characteristics suggest further review.</p>
         </details>
         <div class="items-container" data-items="sprinklers"></div>
       </div>
