@@ -82,6 +82,66 @@ function makeId() {
 // INSPECTION ITEM UI
 // ------------------------------
 
+
+async function normalizeImageBlob(blob, maxDimension = 2200, quality = 0.9) {
+  if (!blob) return null;
+
+  // Already-normalized JPEGs can still be resized to keep IndexedDB/PDF sizes reasonable.
+  try {
+    const dataUrl = await blobToDataURL(blob);
+    const img = new Image();
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+
+    let width = img.naturalWidth || img.width;
+    let height = img.naturalHeight || img.height;
+
+    if (!width || !height) throw new Error("Image dimensions unavailable.");
+
+    const scale = Math.min(1, maxDimension / Math.max(width, height));
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const jpegBlob = await new Promise(resolve =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+
+    if (!jpegBlob) throw new Error("JPEG conversion failed.");
+    return jpegBlob;
+  } catch (error) {
+    console.warn("Image normalization failed; preserving original blob.", error);
+    return blob;
+  }
+}
+
+async function ensureArticlePhotoNormalized(article) {
+  if (!article?._photoBlob) return null;
+
+  if (article._photoBlob.type === "image/jpeg" && article._photoNormalized) {
+    return article._photoBlob;
+  }
+
+  const normalized = await normalizeImageBlob(article._photoBlob);
+  if (normalized) {
+    article._photoBlob = normalized;
+    article._photoName = (article._photoName || "inspection-photo")
+      .replace(/\.[^.]+$/, "") + ".jpg";
+    article._photoNormalized = normalized.type === "image/jpeg";
+  }
+  return article._photoBlob;
+}
+
 function createInspectionItem(title, guidance = "") {
   const tpl = qs("#inspectionItemTemplate");
   const node = tpl.content.cloneNode(true);
@@ -113,14 +173,19 @@ function createInspectionItem(title, guidance = "") {
   const preview = node.querySelector(".photo-preview");
   const remove = node.querySelector(".remove-photo");
 
-  input.addEventListener("change", () => {
+  input.addEventListener("change", async () => {
     const file = input.files?.[0];
     if (!file) return;
 
     clearArticlePreview(article);
-    article._photoBlob = file;
-    article._photoName = file.name || "inspection-photo.jpg";
-    renderPhoto(article, file);
+
+    const normalized = await normalizeImageBlob(file);
+    article._photoBlob = normalized || file;
+    article._photoName = (file.name || "inspection-photo")
+      .replace(/\.[^.]+$/, "") + ".jpg";
+    article._photoNormalized = article._photoBlob?.type === "image/jpeg";
+
+    renderPhoto(article, article._photoBlob);
     markDirty();
   });
 
@@ -379,6 +444,7 @@ function restoreItems(items = []) {
     if (item.photoBlob) {
       article._photoBlob = item.photoBlob;
       article._photoName = item.photoName || "inspection-photo.jpg";
+      article._photoNormalized = item.photoBlob?.type === "image/jpeg";
       renderPhoto(article, item.photoBlob);
     }
   });
@@ -422,6 +488,9 @@ function showSaveNotice(message = "Inspection saved.") {
 }
 
 async function saveCurrentInspection(showNotice = true) {
+  // Normalize all attached images before persistence so reopened inspections remain PDF-safe.
+  await Promise.all(qsa(".inspection-item").map(article => ensureArticlePhotoNormalized(article)));
+
   if (!db) await openDatabase();
 
   if (!currentInspectionId) {
@@ -1193,6 +1262,13 @@ async function generateInspectionPdf(options) {
 
       if (options.includePhotos && item.photoBlob) {
         try {
+          const article = [...section.querySelectorAll(".inspection-item")].find(a =>
+            (a.querySelector(".item-title")?.textContent?.trim() || "") === item.title
+          );
+          if (article) {
+            await ensureArticlePhotoNormalized(article);
+            item.photoBlob = article._photoBlob || item.photoBlob;
+          }
           const dataUrl = await blobToDataURL(item.photoBlob);
           const props = doc.getImageProperties(dataUrl);
           const maxW = 300, maxH = 220;
@@ -1309,7 +1385,7 @@ function fileExtensionFromBlob(blob) {
   return "jpg";
 }
 
-function collectOriginalPhotoFiles() {
+async function collectOriginalPhotoFiles() {
   const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0,10);
@@ -1323,31 +1399,33 @@ function collectOriginalPhotoFiles() {
   const photos = [];
   let overallPhotoNumber = 1;
 
-  qsa(".inspection-section").forEach(section => {
+  for (const section of qsa(".inspection-section")) {
     const sectionTitle = getSectionTitle(section)
       .replace(/^\d+\.\s*/, "")
       .trim();
 
-    [...section.querySelectorAll(".inspection-item")].forEach(article => {
+    for (const article of [...section.querySelectorAll(".inspection-item")]) {
+      if (!article._photoBlob) continue;
+
+      await ensureArticlePhotoNormalized(article);
       const blob = article._photoBlob;
-      if (!blob) return;
+      if (!blob) continue;
 
       const itemTitle = article.querySelector(".item-title")?.textContent?.trim() || "Inspection Photo";
-      const extension = fileExtensionFromBlob(blob);
       const number = String(overallPhotoNumber).padStart(2, "0");
 
       const filename = safeFileName(
         `${prefix} - Photo ${number} - ${sectionTitle} - ${itemTitle}`
-      ) + `.${extension}`;
+      ) + ".jpg";
 
       photos.push(new File([blob], filename, {
-        type: blob.type || "image/jpeg",
+        type: "image/jpeg",
         lastModified: Date.now()
       }));
 
       overallPhotoNumber++;
-    });
-  });
+    }
+  }
 
   return photos;
 }
@@ -1368,48 +1446,72 @@ async function shareOrDownloadPdf(result, originalPhotoFiles = []) {
     type: "application/pdf"
   });
 
-  const allFiles = [pdfFile, ...originalPhotoFiles];
+  // If photos are included, create one reliable ZIP package containing
+  // the PDF plus each inspection photo as a separate JPEG file.
+  if (originalPhotoFiles.length) {
+    if (!window.JSZip) throw new Error("ZIP library did not load.");
 
+    const zip = new JSZip();
+    zip.file(pdfFile.name, pdfFile);
+
+    const photosFolder = zip.folder("Inspection Photos");
+    originalPhotoFiles.forEach(file => photosFolder.file(file.name, file));
+
+    const zipBlob = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 }
+    });
+
+    const baseName = result.filename.replace(/\.pdf$/i, "");
+    const zipFile = new File(
+      [zipBlob],
+      `${baseName} - Export Package.zip`,
+      { type: "application/zip" }
+    );
+
+    if (navigator.share && navigator.canShare) {
+      try {
+        const shareData = {
+          title: result.title,
+          text: "Residential rental inspection report package",
+          files: [zipFile]
+        };
+
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return "shared-package";
+        }
+      } catch (error) {
+        if (error?.name === "AbortError") return "cancelled";
+        console.warn("ZIP share failed; using download fallback.", error);
+      }
+    }
+
+    downloadFile(zipFile);
+    return "downloaded-package";
+  }
+
+  // PDF-only export
   if (navigator.share && navigator.canShare) {
     try {
       const shareData = {
         title: result.title,
         text: "Residential rental inspection report",
-        files: allFiles
+        files: [pdfFile]
       };
 
       if (navigator.canShare(shareData)) {
         await navigator.share(shareData);
         return "shared";
       }
-
-      // Some iOS/WebKit versions may reject a mixed PDF + image share
-      // even though sharing a single file works. Fall back to PDF-only share.
-      const pdfOnly = {
-        title: result.title,
-        text: "Residential rental inspection report",
-        files: [pdfFile]
-      };
-
-      if (navigator.canShare(pdfOnly)) {
-        await navigator.share(pdfOnly);
-
-        if (originalPhotoFiles.length) {
-          originalPhotoFiles.forEach(downloadFile);
-          return "shared-pdf-photos-downloaded";
-        }
-
-        return "shared";
-      }
     } catch (error) {
       if (error?.name === "AbortError") return "cancelled";
-      console.warn("Share failed; using download fallback.", error);
+      console.warn("PDF share failed; using download fallback.", error);
     }
   }
 
-  // Fallback: download each file separately.
   downloadFile(pdfFile);
-  originalPhotoFiles.forEach(downloadFile);
   return "downloaded";
 }
 
@@ -1432,7 +1534,7 @@ async function createPdfReadyReport() {
 
     const result = await generateInspectionPdf(options);
     const originalPhotoFiles = options.includeOriginalPhotos
-      ? collectOriginalPhotoFiles()
+      ? await collectOriginalPhotoFiles()
       : [];
 
     button.textContent = originalPhotoFiles.length
@@ -1443,13 +1545,16 @@ async function createPdfReadyReport() {
 
     if (outcome === "shared") {
       closeExportModal();
-      showSaveNotice("PDF and selected files shared.");
-    } else if (outcome === "shared-pdf-photos-downloaded") {
+      showSaveNotice("PDF shared.");
+    } else if (outcome === "shared-package") {
       closeExportModal();
-      showSaveNotice("PDF shared; original photos downloaded separately.");
+      showSaveNotice("Export package shared.");
+    } else if (outcome === "downloaded-package") {
+      closeExportModal();
+      showSaveNotice("Export package downloaded.");
     } else if (outcome === "downloaded") {
       closeExportModal();
-      showSaveNotice("PDF and selected files downloaded.");
+      showSaveNotice("PDF downloaded.");
     }
   } catch (error) {
     console.error("PDF export failed:", error);

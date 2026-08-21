@@ -336,3 +336,53 @@ select{
 .export-options .export-option input{
   margin-top:1px;
 }
+
+
+/* ---------- Strong selected-state emphasis v6 ---------- */
+.status-buttons button.selected{
+  transform:scale(1.025);
+  box-shadow:0 0 0 3px rgba(31,41,51,.20), 0 3px 10px rgba(31,41,51,.16);
+  font-weight:850;
+}
+
+.status-buttons button[data-status="S"].selected{
+  background:#2f8d49 !important;
+  color:#fff !important;
+  border-color:#236f39 !important;
+  outline:3px solid rgba(47,141,73,.32) !important;
+}
+
+.status-buttons button[data-status="D"].selected{
+  background:#c84b42 !important;
+  color:#fff !important;
+  border-color:#a93c34 !important;
+  outline:3px solid rgba(200,75,66,.32) !important;
+}
+
+.status-buttons button[data-status="IC"].selected{
+  background:#db7729 !important;
+  color:#fff !important;
+  border-color:#b75d18 !important;
+  outline:3px solid rgba(219,119,41,.32) !important;
+}
+
+.status-buttons button[data-status="R"].selected{
+  background:#7c49b5 !important;
+  color:#fff !important;
+  border-color:#623596 !important;
+  outline:3px solid rgba(124,73,181,.32) !important;
+}
+
+.status-buttons button[data-status="NI"].selected{
+  background:#68737d !important;
+  color:#fff !important;
+  border-color:#505a63 !important;
+  outline:3px solid rgba(104,115,125,.32) !important;
+}
+
+.status-buttons button[data-status="NA"].selected{
+  background:#2c7ee8 !important;
+  color:#fff !important;
+  border-color:#1f65be !important;
+  outline:3px solid rgba(44,126,232,.32) !important;
+}
