@@ -298,3 +298,32 @@ select{
   align-items:center;
   min-height:28px;
 }
+
+
+/* ---------- Status color system v4 ---------- */
+.status-buttons button[data-status="S"]{border-color:#3fa45b;color:#2f7f46;background:#f3fbf5}
+.status-buttons button[data-status="S"].selected{background:#dff3e4;border-color:#2f8d49;color:#245f35;outline:3px solid rgba(63,164,91,.22)}
+
+.status-buttons button[data-status="D"]{border-color:#d85c52;color:#a9423b;background:#fff7f6}
+.status-buttons button[data-status="D"].selected{background:#fde4e1;border-color:#c84b42;color:#8f332d;outline:3px solid rgba(216,92,82,.22)}
+
+.status-buttons button[data-status="IC"]{border-color:#e98a3d;color:#b76522;background:#fff8f1}
+.status-buttons button[data-status="IC"].selected{background:#fee8d3;border-color:#db7729;color:#98501c;outline:3px solid rgba(233,138,61,.22)}
+
+.status-buttons button[data-status="R"]{border-color:#8d5bc5;color:#7042a3;background:#faf6ff}
+.status-buttons button[data-status="R"].selected{background:#eadcf8;border-color:#7c49b5;color:#5d358a;outline:3px solid rgba(141,91,197,.22)}
+
+.status-buttons button[data-status="NI"]{border-color:#9aa3ab;color:#606b74;background:#f8f9fa}
+.status-buttons button[data-status="NI"].selected{background:#e4e7ea;border-color:#858f98;color:#4f5961;outline:3px solid rgba(154,163,171,.24)}
+
+.status-buttons button[data-status="NA"]{border-color:#3d8df5;color:#246bc9;background:#f4f8ff}
+.status-buttons button[data-status="NA"].selected{background:#dceaff;border-color:#2c7ee8;color:#1e5fb5;outline:3px solid rgba(61,141,245,.22)}
+
+.status-buttons button.selected{font-weight:800}
+
+.legend-grid span:nth-child(1){color:#2f7f46}
+.legend-grid span:nth-child(2){color:#a9423b}
+.legend-grid span:nth-child(3){color:#b76522}
+.legend-grid span:nth-child(4){color:#7042a3}
+.legend-grid span:nth-child(5){color:#606b74}
+.legend-grid span:nth-child(6){color:#246bc9}
