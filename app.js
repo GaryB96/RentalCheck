@@ -1,6 +1,7 @@
 const DB_NAME = "peiMutualResidentialRentalInspectionDB";
 const DB_VERSION = 1;
 const STORE_NAME = "inspections";
+const SQ_FEET_PER_SQUARE_METRE = 10.763910416709722;
 
 const qs = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
@@ -251,6 +252,8 @@ function renderPhoto(article, blob) {
 function makeSection(s) {
   const el = document.createElement("section");
   el.className = "inspection-section";
+  el.dataset.sectionNumber = s.number;
+  el.dataset.sectionTitle = s.title;
   el.innerHTML = `
     <div class="section-header-bar">
       <button class="section-header" type="button">
@@ -267,6 +270,42 @@ function makeSection(s) {
     const d = document.createElement("details");
     d.className = "guidance";
     d.innerHTML = `<summary>Inspector Guidance</summary><p>${s.guidance}</p>`;
+
+    (s.guidancePdfs || []).forEach(pdf => {
+      const reference = document.createElement("details");
+      reference.className = "guidance-pdf";
+
+      const summary = document.createElement("summary");
+      summary.textContent = pdf.title;
+      reference.appendChild(summary);
+
+      const actions = document.createElement("div");
+      actions.className = "guidance-pdf-actions";
+
+      const openLink = document.createElement("a");
+      openLink.href = pdf.url;
+      openLink.target = "_blank";
+      openLink.rel = "noopener";
+      openLink.textContent = "Open PDF in a new tab";
+
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pdf.url;
+      downloadLink.download = "";
+      downloadLink.textContent = "Download PDF";
+
+      actions.append(openLink, downloadLink);
+      reference.appendChild(actions);
+
+      const viewer = document.createElement("iframe");
+      viewer.className = "guidance-pdf-viewer";
+      viewer.src = pdf.url;
+      viewer.title = pdf.title;
+      viewer.loading = "lazy";
+      reference.appendChild(viewer);
+
+      d.appendChild(reference);
+    });
+
     c.appendChild(d);
   }
 
@@ -277,18 +316,26 @@ function makeSection(s) {
 }
 
 function build() {
-  inspectionSectionsBeforeFire.forEach(s =>
-    qs("#generatedSections").appendChild(makeSection(s))
-  );
+  inspectionSectionsBeforeFire.forEach(s => {
+    const target = s.number <= 5
+      ? qs("#exteriorSections")
+      : qs("#interiorCommonBeforeFire");
+    target.appendChild(makeSection(s));
+  });
 
   Object.entries(fireItems).forEach(([k, arr]) => {
     const t = qs(`[data-items="${k}"]`);
     arr.forEach(i => t.appendChild(createInspectionItem(i)));
   });
 
-  inspectionSectionsAfterFire.forEach(s =>
-    qs("#generatedSectionsAfterFire").appendChild(makeSection(s))
-  );
+  inspectionSectionsAfterFire.forEach(s => {
+    const target = s.number <= 12
+      ? qs("#interiorCommonAfterFire")
+      : s.number <= 16
+        ? qs("#interiorUnitSections")
+        : qs("#finalReviewSections");
+    target.appendChild(makeSection(s));
+  });
 }
 
 
@@ -329,7 +376,7 @@ function updateSectionNAButton(section) {
   const button = section.querySelector(".section-na-button");
   if (!button) return;
 
-  const items = [...section.querySelectorAll(".inspection-item")];
+  const items = getSectionInspectionItems(section);
   if (!items.length) {
     button.disabled = true;
     return;
@@ -340,8 +387,17 @@ function updateSectionNAButton(section) {
   button.classList.toggle("active", allNA);
 }
 
+function getSectionInspectionItems(section) {
+  return [...section.querySelectorAll(".inspection-item")]
+    .filter(item =>
+      !item.closest("#fireAlarmQuestions")?.classList.contains("hidden") &&
+      !item.closest("#sprinklerSystemSection")?.classList.contains("hidden") &&
+      !item.closest('[data-items="co"]')?.classList.contains("hidden")
+    );
+}
+
 function markSectionNA(section) {
-  const items = [...section.querySelectorAll(".inspection-item")];
+  const items = getSectionInspectionItems(section);
   if (!items.length) return;
 
   const allNA = items.every(item => item.dataset.status === "NA");
@@ -424,37 +480,100 @@ function updateCrawl() {
   }
 }
 
-function updateAlarm() {
-  const s = qs("#storeys").value;
-  const u = qs("#dwellingUnits").value;
-  const b = qs("#fireAlarmRule");
+function getLargestStoreyFootprint() {
+  const value = qs("#largestStoreyArea")?.value;
+  if (!value) return null;
 
-  if (!s || !u) {
-    b.className = "rule-alert neutral";
-    b.textContent = "Enter storeys and dwelling units in Section 1.";
-    return;
-  }
+  const squareFeet = Number(value);
+  if (!Number.isFinite(squareFeet) || squareFeet <= 0) return null;
+  return {
+    squareFeet,
+    squareMetres: squareFeet / SQ_FEET_PER_SQUARE_METRE
+  };
+}
 
-  if (inspectionRules.fireAlarm.generalTrigger({ storeys: s, dwellingUnits: u })) {
-    b.className = "rule-alert warning";
-    b.innerHTML =
-      `<strong>General fire-alarm trigger identified.</strong> ${s} storey(s), ${u} dwelling unit(s). ` +
-      `The screening trigger is 4+ storeys OR more than 11 units. Exceptions may apply; use Further Review Required if the requirement cannot be established.`;
-  } else {
-    b.className = "rule-alert ok";
-    b.innerHTML =
-      `<strong>General size/storey trigger not identified.</strong> ${s} storey(s), ${u} dwelling unit(s). ` +
-      `Other conditions can still affect requirements.`;
-  }
+function getNBCCPartResult() {
+  const storeysValue = qs("#storeys")?.value;
+  const footprint = getLargestStoreyFootprint();
+  const hasStoreys = Boolean(storeysValue);
+  const storeys = Number(storeysValue);
+  if (hasStoreys && (!Number.isFinite(storeys) || storeys < 1)) return null;
+
+  const requiresPart3 =
+    (hasStoreys && storeys > 3) ||
+    (footprint && footprint.squareMetres > 600);
+  const canUsePart9 =
+    hasStoreys && storeys <= 3 &&
+    footprint && footprint.squareMetres <= 600;
+  if (!requiresPart3 && !canUsePart9) return null;
+
+  const part = requiresPart3 ? "Part 3" : "Part 9";
+  return {
+    part,
+    message: part === "Part 3"
+      ? "NBCC Part 3 must be used."
+      : "NBCC Part 9 can be applied.",
+    footprint
+  };
+}
+
+function updateNBCCPart() {
+  const flag = qs("#nbccPartFlag");
+  const result = getNBCCPartResult();
+  flag.className = result
+    ? `rule-alert ${result.part === "Part 3" ? "warning" : "ok"}`
+    : "rule-alert neutral";
+  flag.textContent = result
+    ? result.message
+    : "Enter the number of storeys above grade and largest storey footprint to determine the applicable NBCC Part.";
+}
+
+function updateSprinklerSection() {
+  const section = qs("#sprinklerSystemSection");
+  const isNotSprinklered = qs("#sprinkleredNo")?.checked || false;
+  section?.classList.toggle("hidden", isNotSprinklered);
+  const inspectionSection = section?.closest(".inspection-section");
+  if (inspectionSection) updateSectionNAButton(inspectionSection);
+}
+
+function getSprinkleredValue() {
+  if (qs("#sprinkleredYes")?.checked) return "Yes";
+  if (qs("#sprinkleredNo")?.checked) return "No";
+  return "";
+}
+
+function updateFireAlarmQuestions() {
+  const isInstalled = qs("#centralFireAlarmYes")?.checked || false;
+  const questions = qs("#fireAlarmQuestions");
+  questions?.classList.toggle("hidden", !isInstalled);
+  const section = questions?.closest(".inspection-section");
+  if (section) updateSectionNAButton(section);
 }
 
 function updateCO() {
-  const any = qsa(".co-source").some(x => x.checked);
+  const sources = qsa(".co-source");
+  const any = sources.some(x => x.checked);
+  const fuelApplianceSelected = qsa(".co-fuel-source").some(x => x.checked);
   const b = qs("#coMessage");
   b.className = any ? "rule-alert warning" : "rule-alert neutral";
   b.textContent = any
-    ? "Potential CO source / communicating garage selected. Confirm the applicable CO detection arrangement."
-    : "No potential CO source selected yet.";
+    ? "Potential CO source selected. Confirm the applicable CO detection arrangement."
+    : "Please select any that apply.";
+  qs("#coUnitsPanel")?.classList.toggle("hidden", !any);
+  const coQuestions = qs('[data-items="co"]');
+  coQuestions?.classList.toggle("hidden", !any);
+  const coSection = coQuestions?.closest(".inspection-section");
+  if (coSection) updateSectionNAButton(coSection);
+
+  const section = qs('.inspection-section[data-section-number="14"]');
+  const heading = section?.querySelector(".section-header span");
+  if (heading) {
+    const units = qs("#coSharedUnits")?.value.trim().replace(/\s+/g, " ");
+    heading.textContent = `${section.dataset.sectionNumber}. ${section.dataset.sectionTitle}`;
+    if (fuelApplianceSelected && units) {
+      heading.textContent += ` — CO detector reminder: Units ${units} may need a CO detector.`;
+    }
+  }
 }
 
 // ------------------------------
@@ -490,10 +609,33 @@ function serializeFields() {
 }
 
 function restoreFields(fields = {}) {
-  qsa("input, textarea, select").forEach((el, i) => {
+  const controls = qsa("input, textarea, select");
+  const sprinklerItems = qs("#sprinklerSystemSection [data-items='sprinklers']");
+  const firstSprinklerControl = sprinklerItems?.querySelector("input, textarea, select");
+  const legacyFieldBoundary = firstSprinklerControl
+    ? controls.indexOf(firstSprinklerControl)
+    : controls.length;
+  const isLegacyLayout = !Object.prototype.hasOwnProperty.call(fields, "id:largestStoreyArea");
+
+  controls.forEach((el, i) => {
     if (el.type === "file" || el.id === "savedInspectionSearch") return;
 
-    const key = getFieldKey(el, i);
+    let key = getFieldKey(el, i);
+    if (isLegacyLayout && key.startsWith("field:") && i < legacyFieldBoundary) {
+      key = `field:${i - 4}`;
+    }
+
+    if (isLegacyLayout && el.id === "sprinkleredYes" &&
+        fields["name:sprinklerPresence:1"] === true) {
+      el.checked = true;
+      return;
+    }
+    if (isLegacyLayout && el.id === "sprinkleredNo" &&
+        fields["name:sprinklerPresence:0"] === true) {
+      el.checked = true;
+      return;
+    }
+
     if (!Object.prototype.hasOwnProperty.call(fields, key)) return;
 
     if (el.type === "checkbox" || el.type === "radio") {
@@ -507,6 +649,7 @@ function restoreFields(fields = {}) {
 function serializeItems() {
   return qsa(".inspection-item").map((el, i) => ({
     index: i,
+    title: el.querySelector(".item-title")?.textContent?.trim() || "",
     status: el.dataset.status || "",
     observation: el.querySelector(".observation")?.value || "",
     photoBlob: el._photoBlob || null,
@@ -515,7 +658,13 @@ function serializeItems() {
 }
 
 function restoreItems(items = []) {
-  qsa(".inspection-item").forEach(article => {
+  const articles = qsa(".inspection-item");
+  const alarmStart = articles.findIndex(article =>
+    article.closest('[data-items="alarm"]')
+  );
+  const legacyAlarmItemCount = 6;
+
+  articles.forEach(article => {
     article.dataset.status = "";
     qsaWithin(article, ".status-buttons button").forEach(b => b.classList.remove("selected"));
     article.querySelector(".deficiency-details")?.classList.add("hidden");
@@ -531,7 +680,19 @@ function restoreItems(items = []) {
   });
 
   items.forEach(item => {
-    const article = qsa(".inspection-item")[item.index];
+    let article = articles[item.index];
+
+    if (item.title && article?.querySelector(".item-title")?.textContent?.trim() !== item.title) {
+      const matches = articles.filter(candidate =>
+        candidate.querySelector(".item-title")?.textContent?.trim() === item.title
+      );
+      article = matches.length === 1 ? matches[0] : null;
+    } else if (!item.title && alarmStart >= 0) {
+      const legacyAlarmEnd = alarmStart + legacyAlarmItemCount;
+      if (item.index >= alarmStart && item.index < legacyAlarmEnd) return;
+      if (item.index >= legacyAlarmEnd) article = articles[item.index - 1];
+    }
+
     if (!article) return;
 
     if (item.status) {
@@ -611,7 +772,6 @@ async function saveCurrentInspection(showNotice = true) {
     propertyAddress: qs("#propertyAddress")?.value?.trim() || "",
     ownerInsured: qs("#ownerInsured")?.value?.trim() || "",
     inspectionDate: qs("#inspectionDate")?.value || "",
-    inspector: qs("#inspector")?.value?.trim() || "",
     yearConstructed: qs("#yearConstructed")?.value || "",
     dwellingUnits: qs("#dwellingUnits")?.value || "",
     storeys: qs("#storeys")?.value || "",
@@ -650,7 +810,9 @@ async function openSavedInspection(id) {
   isDirty = false;
 
   updateCrawl();
-  updateAlarm();
+  updateNBCCPart();
+  updateSprinklerSection();
+  updateFireAlarmQuestions();
   updateCO();
   updateCurrentInspectionLabel();
   closeOpenModal();
@@ -681,7 +843,9 @@ async function startNewInspection() {
   }
 
   updateCrawl();
-  updateAlarm();
+  updateNBCCPart();
+  updateSprinklerSection();
+  updateFireAlarmQuestions();
   updateCO();
   updateCurrentInspectionLabel();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -748,7 +912,6 @@ async function renderSavedInspections(filter = "") {
     const haystack = [
       r.propertyAddress,
       r.ownerInsured,
-      r.inspector,
       r.inspectionDate
     ].join(" ").toLowerCase();
     return !needle || haystack.includes(needle);
@@ -866,6 +1029,11 @@ function getSectionTitle(section) {
 
 function getExportableItems(section, options) {
   return [...section.querySelectorAll(".inspection-item")]
+    .filter(article =>
+      !article.closest("#fireAlarmQuestions")?.classList.contains("hidden") &&
+      !article.closest("#sprinklerSystemSection")?.classList.contains("hidden") &&
+      !article.closest('[data-items="co"]')?.classList.contains("hidden")
+    )
     .map(article => {
       const title = article.querySelector(".item-title")?.textContent?.trim() || "";
       const status = article.dataset.status || "";
@@ -897,9 +1065,12 @@ async function buildReportHTML(options) {
   const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
-  const inspector = qs("#inspector")?.value?.trim() || "";
   const units = qs("#dwellingUnits")?.value || "";
   const storeys = qs("#storeys")?.value || "";
+  const footprint = getLargestStoreyFootprint();
+  const sprinklered = getSprinkleredValue();
+  const constructionType = qs("#constructionType")?.value || "";
+  const nbccPart = getNBCCPartResult();
   const year = qs("#yearConstructed")?.value || "";
   const buildingType = qs("#buildingType")?.value || "";
 
@@ -1164,11 +1335,14 @@ async function buildReportHTML(options) {
       <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
       <div class="property-row"><strong>Owner / Insured:</strong> ${escapeHTML(owner)}</div>
       <div class="property-row"><strong>Inspection Date:</strong> ${escapeHTML(formatInspectionDate(date))}</div>
-      <div class="property-row"><strong>Inspector:</strong> ${escapeHTML(inspector)}</div>
       <div class="property-row"><strong>Building Type:</strong> ${escapeHTML(buildingType)}</div>
       <div class="property-row"><strong>Year Constructed:</strong> ${escapeHTML(year)}</div>
       <div class="property-row"><strong>Dwelling Units:</strong> ${escapeHTML(units)}</div>
-      <div class="property-row"><strong>Storeys:</strong> ${escapeHTML(storeys)}</div>
+      <div class="property-row"><strong>Storeys Above Grade:</strong> ${escapeHTML(storeys)}</div>
+      <div class="property-row"><strong>Largest Storey Footprint:</strong> ${escapeHTML(footprint ? `${footprint.squareFeet} sq ft (${footprint.squareMetres.toFixed(1)} m²)` : "")}</div>
+      <div class="property-row"><strong>Sprinklered:</strong> ${escapeHTML(sprinklered)}</div>
+      <div class="property-row"><strong>Construction Type:</strong> ${escapeHTML(constructionType)}</div>
+      <div class="property-row"><strong>Applicable NBCC Part:</strong> ${escapeHTML(nbccPart?.message || "Not determined")}</div>
     </div>
 
     <div class="standards">
@@ -1228,9 +1402,15 @@ async function generateInspectionPdf(options) {
   const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
-  const inspector = qs("#inspector")?.value?.trim() || "";
   const units = qs("#dwellingUnits")?.value || "";
   const storeys = qs("#storeys")?.value || "";
+  const footprint = getLargestStoreyFootprint();
+  const footprintText = footprint
+    ? `${footprint.squareFeet} sq ft (${footprint.squareMetres.toFixed(1)} m²)`
+    : "";
+  const sprinklered = getSprinkleredValue();
+  const constructionType = qs("#constructionType")?.value || "";
+  const nbccPart = getNBCCPartResult();
   const year = qs("#yearConstructed")?.value || "";
   const buildingType = qs("#buildingType")?.value || "";
 
@@ -1282,9 +1462,11 @@ async function generateInspectionPdf(options) {
   const colW = contentWidth / 2 - 8;
   [
     [["Property", address], ["Owner / Insured", owner]],
-    [["Inspection Date", date], ["Inspector", inspector]],
+    [["Inspection Date", date], ["", ""]],
     [["Building Type", buildingType], ["Year Constructed", year]],
-    [["Dwelling Units", units], ["Storeys", storeys]]
+    [["Dwelling Units", units], ["Storeys Above Grade", storeys]],
+    [["Largest Storey Footprint", footprintText], ["Sprinklered", sprinklered]],
+    [["Construction Type", constructionType], ["Applicable NBCC Part", nbccPart?.message || "Not determined"]]
   ].forEach(row => {
     ensureSpace(16);
     addMeta(row[0][0], row[0][1], margin, colW);
@@ -1456,7 +1638,7 @@ async function generateInspectionPdf(options) {
   doc.setProperties({
     title: `${address} - Residential Rental Inspection`,
     subject: "Residential Rental Insurance Inspection",
-    author: inspector || "PEI Mutual",
+    author: "PEI Mutual",
     creator: "PEI Mutual Residential Rental Inspection App"
   });
 
@@ -1706,12 +1888,19 @@ function wireInputs() {
   ["#crawlSpace", "#crawlHeight", "#crawlOccupied", "#crawlFlue", "#crawlPlenum"]
     .forEach(s => qs(s)?.addEventListener("change", updateCrawl));
 
-  ["#storeys", "#dwellingUnits"]
-    .forEach(s => qs(s)?.addEventListener("input", updateAlarm));
+  ["#centralFireAlarmYes", "#centralFireAlarmNo"]
+    .forEach(s => qs(s)?.addEventListener("change", updateFireAlarmQuestions));
+
+  ["#storeys", "#largestStoreyArea"]
+    .forEach(s => qs(s)?.addEventListener("input", updateNBCCPart));
+
+  ["#sprinkleredYes", "#sprinkleredNo"]
+    .forEach(s => qs(s)?.addEventListener("change", updateSprinklerSection));
 
   qsa(".co-source").forEach(e =>
     e.addEventListener("change", updateCO)
   );
+  qs("#coSharedUnits")?.addEventListener("input", updateCO);
 
   qs("#standardsToggle").addEventListener("click", () =>
     qs("#standardsPanel").classList.toggle("hidden")
@@ -1782,7 +1971,9 @@ async function init() {
   }
 
   updateCrawl();
-  updateAlarm();
+  updateNBCCPart();
+  updateSprinklerSection();
+  updateFireAlarmQuestions();
   updateCO();
   updateCurrentInspectionLabel();
   updateAllSectionNAButtons();

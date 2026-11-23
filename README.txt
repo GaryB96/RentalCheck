@@ -1,40 +1,38 @@
-PEI Mutual Residential Rental Inspection — EXPORT VERSION
+PEI Mutual Residential Rental Inspection
 
-Replace in your existing project:
-- index.html
-- styles.css
-- app.js
+A browser-based inspection checklist for existing residential rental buildings in
+Prince Edward Island. It provides a structured visual-inspection workflow for
+property details, exterior conditions, interior common areas, dwelling units,
+fire and life safety, and building systems.
 
-Keep:
-- data/inspection-rules.js
-A matching copy is included.
+Inspection items can be rated as satisfactory, deficient, an immediate concern,
+requiring further review, not inspected, or not applicable. The app supports
+written observations, photos, reference guidance, and section-level summaries.
+It can also calculate an overall risk level and identify conditions that need
+special attention.
 
-NEW EXPORT FUNCTION
-- "Export PDF" button in header
-- Optional inclusion of:
-  * satisfactory items
-  * N/A and Not Inspected items
-  * photos
-  * code / inspector guidance
-- Creates a clean print-ready inspection report
-- Includes property details, rated inspection items, observations, photos, fire-section selections, summary, overall risk, reference standards and disclaimer
-- Automatically opens the browser print dialog
+Main features
+- Mobile-friendly PWA interface that can be installed on a supported device
+- New, open, and local save of inspections using browser IndexedDB storage
+- Automatic saving as the inspection is edited
+- Property, fire-safety, and building-condition checklists
+- Optional photo capture or photo-library selection
+- Print-ready PDF/report export with selectable report content
+- Links to applicable code and inspection reference documents
 
-ON IPAD
-1. Tap Export PDF.
-2. Choose report options.
+Exporting on iPad or iPhone
+1. Tap Export.
+2. Select the report sections and details to include.
 3. Tap Create PDF Report.
-4. Safari opens the print preview.
-5. Pinch outward on the document preview to open it as a PDF.
-6. Tap Share.
-7. Save to Files/iCloud Drive/OneDrive/email/etc.
+4. In Safari print preview, pinch outward and tap Share.
+5. Save to Files, iCloud Drive, OneDrive, or another destination.
 
-WHY PRINT-TO-PDF
-This uses the browser's native PDF rendering rather than an external JavaScript PDF library.
-That keeps the GitHub Pages app simple, reliable, and free of third-party dependencies.
+Data and privacy
+Inspection records and photos are stored locally in the current browser and are
+not uploaded to an application server. Clearing browser data can remove saved
+inspections, so export important reports or create backups as needed.
 
-DEPLOY
-1. Replace index.html, styles.css and app.js.
-2. Commit and push.
-3. Wait for GitHub Pages deployment.
-4. Hard-refresh the page.
+Deployment
+Host the RentalCheck folder through a static web server or GitHub Pages. Keep
+the HTML, CSS, JavaScript, data, icon, and references folders together so the
+PWA, checklist rules, and linked reference PDFs load correctly.
