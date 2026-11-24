@@ -1438,6 +1438,28 @@ function safeFileName(value) {
     .trim();
 }
 
+function getInspectionPdfFilename() {
+  const owner = qs("#ownerInsured")?.value?.trim() || "";
+  const address = qs("#propertyAddress")?.value?.trim() || "";
+  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0, 10);
+  const parts = [owner, address, "Rental Inspection", date].filter(Boolean);
+  return safeFileName(parts.join(" - ")) + ".pdf";
+}
+
+function getTransferFilename() {
+  const owner = qs("#ownerInsured")?.value?.trim() || "";
+  const address = qs("#propertyAddress")?.value?.trim() || "";
+  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0, 10);
+  const parts = [owner, address, "Rental Inspection", date].filter(Boolean);
+  return safeFileName(parts.join(" - ")) + " - Transfer.json";
+}
+
+function isMobileBrowser() {
+  const userAgent = navigator.userAgent || "";
+  const isIPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /Android|iPhone|iPad|iPod/i.test(userAgent) || isIPad;
+}
+
 function photoFormat(blob) {
   const type = (blob?.type || "").toLowerCase();
   if (type.includes("png")) return "PNG";
@@ -1726,14 +1748,6 @@ async function generateInspectionPdf(options) {
     creator: "PEI Mutual Residential Rental Inspection App"
   });
 
-  const dateForName = date || new Date().toISOString().slice(0, 10);
-
-  const filenameParts = [];
-  if (owner) filenameParts.push(owner);
-  if (address) filenameParts.push(address);
-  filenameParts.push("Rental Inspection");
-  filenameParts.push(dateForName);
-
   const shareTitleParts = [];
   if (owner) shareTitleParts.push(owner);
   if (address) shareTitleParts.push(address);
@@ -1741,7 +1755,7 @@ async function generateInspectionPdf(options) {
 
   return {
     blob: doc.output("blob"),
-    filename: safeFileName(filenameParts.join(" - ")) + ".pdf",
+    filename: getInspectionPdfFilename(),
     title: shareTitleParts.join(" - ")
   };
 }
@@ -1806,12 +1820,12 @@ async function saveArticlePhoto(article) {
   }
 }
 
-async function shareOrDownloadPdf(result) {
+async function shareOrDownloadPdf(result, allowShareSheet) {
   const pdfFile = new File([result.blob], result.filename, {
     type: "application/pdf"
   });
 
-  if (navigator.share && navigator.canShare) {
+  if (allowShareSheet && navigator.share && navigator.canShare) {
     try {
       const shareData = {
         title: result.title,
@@ -1842,9 +1856,27 @@ async function createPdfReadyReport() {
   const button = qs("#createPdfReport");
   const original = button.textContent;
   let inspectionSaveFailed = false;
+  let saveHandle = null;
+  const useShareSheet = isMobileBrowser();
 
   try {
     button.disabled = true;
+    if (!useShareSheet && typeof window.showSaveFilePicker === "function") {
+      button.textContent = "Choose save location…";
+      try {
+        saveHandle = await window.showSaveFilePicker({
+          suggestedName: getInspectionPdfFilename(),
+          types: [{
+            description: "PDF document",
+            accept: { "application/pdf": [".pdf"] }
+          }]
+        });
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        throw error;
+      }
+    }
+
     button.textContent = "Creating PDF…";
     try {
       await saveCurrentInspection(false);
@@ -1854,14 +1886,27 @@ async function createPdfReadyReport() {
     }
 
     const result = await generateInspectionPdf(options);
-    button.textContent = "Opening Share Sheet…";
-    const outcome = await shareOrDownloadPdf(result);
+    let outcome;
+    if (saveHandle) {
+      const writable = await saveHandle.createWritable();
+      await writable.write(result.blob);
+      await writable.close();
+      outcome = "saved";
+    } else {
+      button.textContent = useShareSheet ? "Opening Share Sheet…" : "Downloading PDF…";
+      outcome = await shareOrDownloadPdf(result, useShareSheet);
+    }
 
-    if (outcome === "shared") {
+    if (outcome === "saved") {
+      closeExportModal();
+      showSaveNotice(inspectionSaveFailed
+        ? "PDF saved. The inspection could not be saved in this browser."
+        : "PDF saved to the selected folder.");
+    } else if (outcome === "shared") {
       closeExportModal();
       showSaveNotice(inspectionSaveFailed
         ? "PDF shared. The inspection could not be saved in this browser."
-        : "PDF shared.");
+        : "PDF shared. Choose a destination in the share menu.");
     } else if (outcome === "downloaded") {
       closeExportModal();
       showSaveNotice(inspectionSaveFailed
@@ -1880,6 +1925,18 @@ async function createPdfReadyReport() {
 
 
 function openExportModal() {
+  const button = qs("#createPdfReport");
+  const description = qs("#exportDescription");
+  if (isMobileBrowser()) {
+    button.textContent = "Create & Share PDF";
+    description.textContent = "Create a PDF and choose a destination from the device share menu.";
+  } else if (typeof window.showSaveFilePicker === "function") {
+    button.textContent = "Create & Save PDF";
+    description.textContent = "Create a PDF and choose where to save it.";
+  } else {
+    button.textContent = "Create & Download PDF";
+    description.textContent = "The PDF will download to your browser's Downloads folder.";
+  }
   qs("#exportModal").classList.remove("hidden");
 }
 
@@ -1896,6 +1953,24 @@ function closeTransferModal() {
 }
 
 async function exportTransferFile() {
+  const useShareSheet = isMobileBrowser();
+  const filename = getTransferFilename();
+  let saveHandle = null;
+  if (!useShareSheet && typeof window.showSaveFilePicker === "function") {
+    try {
+      saveHandle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: "Inspection transfer file",
+          accept: { "application/json": [".json"] }
+        }]
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") return "cancelled";
+      throw error;
+    }
+  }
+
   const items = await Promise.all(serializeItems().map(async item => {
     const { photoBlob, ...serializedItem } = item;
     return {
@@ -1911,18 +1986,19 @@ async function exportTransferFile() {
     items
   };
   const json = JSON.stringify(payload, null, 2);
-  const address = qs("#propertyAddress")?.value?.trim() || "";
-  const owner = qs("#ownerInsured")?.value?.trim() || "";
-  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0, 10);
-  const filename = safeFileName(
-    [owner, address, "Rental Inspection", date].filter(Boolean).join(" - ")
-  ) + " - Transfer.json";
   const file = new File([json], filename, {
     type: "application/json",
     lastModified: Date.now()
   });
 
-  if (navigator.share && navigator.canShare) {
+  if (saveHandle) {
+    const writable = await saveHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    return "saved";
+  }
+
+  if (useShareSheet && navigator.share && navigator.canShare) {
     try {
       const shareData = { title: filename, files: [file] };
       if (navigator.canShare(shareData)) {
@@ -2081,14 +2157,19 @@ function wireInputs() {
     const button = event.currentTarget;
     const original = button.textContent;
     button.disabled = true;
-    button.textContent = "Preparing File…";
+    button.textContent = !isMobileBrowser() && typeof window.showSaveFilePicker === "function"
+      ? "Choose save location…"
+      : "Preparing File…";
     try {
       const outcome = await exportTransferFile();
       if (outcome === "cancelled") return;
       closeTransferModal();
-      showSaveNotice(outcome === "shared"
-        ? "Transfer file shared. Choose OneDrive to save it."
-        : "Transfer file downloaded. Check Downloads, then upload it to OneDrive.");
+      const notice = {
+        saved: "Transfer file saved to the selected folder.",
+        shared: "Transfer file shared. Choose a destination in the share menu.",
+        downloaded: "Transfer file downloaded. Check Downloads, then upload it to OneDrive."
+      };
+      showSaveNotice(notice[outcome]);
     } catch (error) {
       console.error("Could not export inspection transfer file:", error);
       alert(`The transfer file could not be created. ${error?.message || "Try again."}`);

@@ -28,10 +28,9 @@ Exporting on iPad or iPhone
 4. Choose OneDrive if it appears in the Share Sheet. Otherwise choose Save to
    Files and select a OneDrive folder.
 
-On a computer, exported PDFs and transfer files go to the browser's Downloads
-folder by default. In Chrome or Edge, press Ctrl+J to open the downloads list.
-Enable “Ask where to save each file” in browser download settings to choose a
-different folder, such as a synced OneDrive folder.
+On a computer, the app opens a save dialog for PDFs and transfer files when the
+browser supports it. Otherwise, files go to the browser's Downloads folder.
+In Chrome or Edge, press Ctrl+J to open the downloads list.
 
 Transferring an inspection between devices
 1. On the first device, tap Transfer, then Export File.
