@@ -521,9 +521,7 @@ function getNBCCPartResult() {
   const part = requiresPart3 ? "Part 3" : "Part 9";
   return {
     part,
-    message: part === "Part 3"
-      ? "NBCC Part 3 must be used."
-      : "NBCC Part 9 can be applied.",
+    message: `Preliminary screening indicates ${part} may apply.`,
     footprint
   };
 }
@@ -534,8 +532,8 @@ function updateNBCCPart() {
   flag.className = result
     ? `rule-alert ${result.part === "Part 3" ? "warning" : "ok"}`
     : "rule-alert neutral";
-  flag.textContent = result
-    ? result.message
+  flag.innerHTML = result
+    ? `<strong>${result.message}</strong><br><small>This screening uses storeys and largest-storey area only. Occupancy and other Code criteria may affect applicability; confirm with the authority having jurisdiction or a qualified code professional.</small>`
     : "Enter the number of storeys above grade and largest storey footprint to determine the applicable NBCC Part.";
 }
 
