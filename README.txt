@@ -25,13 +25,23 @@ Exporting on iPad or iPhone
 1. Tap Export.
 2. Select the report sections and details to include.
 3. Tap Create & Share PDF.
-4. Choose OneDrive, Files, or another destination in the Share Sheet.
+4. Choose OneDrive if it appears in the Share Sheet. Otherwise choose Save to
+   Files and select a OneDrive folder.
+
+On a computer, exported PDFs and transfer files go to the browser's Downloads
+folder by default. In Chrome or Edge, press Ctrl+J to open the downloads list.
+Enable “Ask where to save each file” in browser download settings to choose a
+different folder, such as a synced OneDrive folder.
 
 Transferring an inspection between devices
 1. On the first device, tap Transfer, then Export File.
-2. Share the JSON transfer file to OneDrive, or download it and upload it there.
+2. Share the JSON transfer file to OneDrive if available. Otherwise choose Save
+   to Files and select a OneDrive folder, or download it and upload it there.
 3. On the other device, open the same app, tap Transfer, then Import File.
 4. Select the transfer file from OneDrive or the device's Files/Downloads location.
+
+If OneDrive is not shown in Files on iPad, sign in to the OneDrive app, then
+enable its location from Files > Browse > More > Edit.
 
 The transfer file contains editable inspection data and attached photos. Importing
 it creates a local copy on the receiving device.

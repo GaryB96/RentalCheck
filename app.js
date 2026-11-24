@@ -1865,8 +1865,8 @@ async function createPdfReadyReport() {
     } else if (outcome === "downloaded") {
       closeExportModal();
       showSaveNotice(inspectionSaveFailed
-        ? "PDF downloaded. The inspection could not be saved in this browser."
-        : "PDF downloaded.");
+        ? "PDF downloaded. Check Downloads; the inspection could not be saved locally."
+        : "PDF downloaded. Check your browser's Downloads folder.");
     }
   } catch (error) {
     console.error("PDF export failed:", error);
@@ -2088,7 +2088,7 @@ function wireInputs() {
       closeTransferModal();
       showSaveNotice(outcome === "shared"
         ? "Transfer file shared. Choose OneDrive to save it."
-        : "Transfer file downloaded. Upload it to OneDrive to transfer devices.");
+        : "Transfer file downloaded. Check Downloads, then upload it to OneDrive.");
     } catch (error) {
       console.error("Could not export inspection transfer file:", error);
       alert(`The transfer file could not be created. ${error?.message || "Try again."}`);
