@@ -420,6 +420,7 @@ select{
     grid-template-columns:1fr 1fr;
   }
 
+  .photo-row .save-photo,
   .photo-row .remove-photo{
     grid-column:1 / -1;
   }
@@ -437,6 +438,7 @@ select{
     grid-template-columns:1fr;
   }
 
+  .photo-row .save-photo,
   .photo-row .remove-photo{
     grid-column:auto;
   }

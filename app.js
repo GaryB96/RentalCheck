@@ -175,6 +175,7 @@ function createInspectionItem(title, guidance = "") {
   const libraryInput = node.querySelector(".library-input");
   const preview = node.querySelector(".photo-preview");
   const remove = node.querySelector(".remove-photo");
+  const save = node.querySelector(".save-photo");
 
   async function handleSelectedPhoto(inputElement) {
     const file = inputElement.files?.[0];
@@ -206,8 +207,11 @@ function createInspectionItem(title, guidance = "") {
     if (cameraInput) cameraInput.value = "";
     if (libraryInput) libraryInput.value = "";
     remove.classList.add("hidden");
+    save?.classList.add("hidden");
     markDirty();
   });
+
+  save?.addEventListener("click", () => saveArticlePhoto(article));
 
   node.querySelector(".observation").addEventListener("input", markDirty);
   return node;
@@ -225,6 +229,7 @@ function clearArticlePreview(article) {
 function renderPhoto(article, blob) {
   const preview = article.querySelector(".photo-preview");
   const remove = article.querySelector(".remove-photo");
+  const save = article.querySelector(".save-photo");
   if (!preview || !blob) return;
 
   clearArticlePreview(article);
@@ -243,6 +248,7 @@ function renderPhoto(article, blob) {
   preview.appendChild(caption);
 
   remove?.classList.remove("hidden");
+  save?.classList.remove("hidden");
 }
 
 // ------------------------------
@@ -379,9 +385,12 @@ function updateSectionNAButton(section) {
   const items = getSectionInspectionItems(section);
   if (!items.length) {
     button.disabled = true;
+    button.textContent = "Section N/A";
+    button.classList.remove("active");
     return;
   }
 
+  button.disabled = false;
   const allNA = items.every(item => item.dataset.status === "NA");
   button.textContent = allNA ? "Clear Section N/A" : "Section N/A";
   button.classList.toggle("active", allNA);
@@ -677,6 +686,7 @@ function restoreItems(items = []) {
       input.value = "";
     });
     article.querySelector(".remove-photo")?.classList.add("hidden");
+    article.querySelector(".save-photo")?.classList.add("hidden");
   });
 
   items.forEach(item => {
@@ -853,14 +863,15 @@ async function startNewInspection() {
 
 function resetFormVisuals() {
   qsa("input, textarea, select").forEach(el => {
-    if (el.id === "savedInspectionSearch") return;
-
     if (el.type === "checkbox" || el.type === "radio") {
-      el.checked = false;
-    } else if (el.type !== "file") {
+      el.checked = el.defaultChecked;
+    } else if (el.tagName === "SELECT") {
+      const defaultIndex = [...el.options].findIndex(option => option.defaultSelected);
+      el.selectedIndex = defaultIndex < 0 ? 0 : defaultIndex;
+    } else if (el.type === "file") {
       el.value = "";
     } else {
-      el.value = "";
+      el.value = el.defaultValue;
     }
   });
 
@@ -872,9 +883,22 @@ function resetFormVisuals() {
     article._photoBlob = null;
     article._photoName = "";
     article.querySelector(".remove-photo")?.classList.add("hidden");
+    article.querySelector(".save-photo")?.classList.add("hidden");
   });
 
   qs("#crawlSpaceDetails")?.classList.add("hidden");
+
+  qsa(".inspection-section").forEach(section => {
+    setSectionCollapsed(section, section.dataset.section !== "property");
+  });
+  qsa(".inspection-phase").forEach((phase, index) => {
+    phase.open = index === 0;
+  });
+  qsa("details:not(.inspection-phase)").forEach(details => {
+    details.open = false;
+  });
+  qs("#standardsPanel")?.classList.add("hidden");
+  updateAllSectionNAButtons();
 }
 
 // ------------------------------
@@ -1671,51 +1695,6 @@ function fileExtensionFromBlob(blob) {
   return "jpg";
 }
 
-async function collectOriginalPhotoFiles() {
-  const address = qs("#propertyAddress")?.value?.trim() || "";
-  const owner = qs("#ownerInsured")?.value?.trim() || "";
-  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0,10);
-
-  const prefixParts = [];
-  if (owner) prefixParts.push(owner);
-  if (address) prefixParts.push(address);
-  prefixParts.push(date);
-
-  const prefix = safeFileName(prefixParts.join(" - "));
-  const photos = [];
-  let overallPhotoNumber = 1;
-
-  for (const section of qsa(".inspection-section")) {
-    const sectionTitle = getSectionTitle(section)
-      .replace(/^\d+\.\s*/, "")
-      .trim();
-
-    for (const article of [...section.querySelectorAll(".inspection-item")]) {
-      if (!article._photoBlob) continue;
-
-      await ensureArticlePhotoNormalized(article);
-      const blob = article._photoBlob;
-      if (!blob) continue;
-
-      const itemTitle = article.querySelector(".item-title")?.textContent?.trim() || "Inspection Photo";
-      const number = String(overallPhotoNumber).padStart(2, "0");
-
-      const filename = safeFileName(
-        `${prefix} - Photo ${number} - ${sectionTitle} - ${itemTitle}`
-      ) + ".jpg";
-
-      photos.push(new File([blob], filename, {
-        type: "image/jpeg",
-        lastModified: Date.now()
-      }));
-
-      overallPhotoNumber++;
-    }
-  }
-
-  return photos;
-}
-
 function downloadFile(file) {
   const url = URL.createObjectURL(file);
   const a = document.createElement("a");
@@ -1727,65 +1706,51 @@ function downloadFile(file) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-async function shareOrDownloadPdf(result, originalPhotoFiles = []) {
+async function saveArticlePhoto(article) {
+  try {
+    const blob = article?._photoBlob;
+    if (!blob) throw new Error("The inspection photo is unavailable.");
+
+    const address = qs("#propertyAddress")?.value?.trim() || "";
+    const itemTitle = article.querySelector(".item-title")?.textContent?.trim() || "Inspection Photo";
+    const sectionTitle = getSectionTitle(article.closest(".inspection-section"))
+      .replace(/^\d+\.\s*/, "")
+      .trim();
+    const filename = safeFileName(
+      [address, sectionTitle, itemTitle].filter(Boolean).join(" - ")
+    ) + `.${fileExtensionFromBlob(blob)}`;
+    const file = new File([blob], filename, {
+      type: blob.type || "image/jpeg",
+      lastModified: Date.now()
+    });
+
+    if (navigator.share && navigator.canShare) {
+      try {
+        const shareData = { title: itemTitle, files: [file] };
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          showSaveNotice("Photo shared. Choose Save Image or Save to Photos in the share menu.");
+          return;
+        }
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.warn("Photo sharing failed; using download fallback.", error);
+      }
+    }
+
+    downloadFile(file);
+    showSaveNotice("Photo downloaded. Use your device's Files or Downloads app to save it to Photos/Gallery.");
+  } catch (error) {
+    console.error("Could not save inspection photo:", error);
+    alert(`The photo could not be saved. ${error?.message || "Try again."}`);
+  }
+}
+
+async function shareOrDownloadPdf(result) {
   const pdfFile = new File([result.blob], result.filename, {
     type: "application/pdf"
   });
 
-  // If photos are included, create one reliable ZIP package containing
-  // the PDF plus each inspection photo as a separate JPEG file.
-  if (originalPhotoFiles.length) {
-    if (!window.JSZip) throw new Error("ZIP library did not load.");
-
-    const zip = new JSZip();
-    zip.file(pdfFile.name, pdfFile);
-
-    const photosFolder = zip.folder("Inspection Photos");
-    originalPhotoFiles.forEach(file => photosFolder.file(file.name, file));
-
-    const progressButton = qs("#createPdfReport");
-    if (progressButton) {
-      progressButton.textContent = `Packaging PDF + ${originalPhotoFiles.length} photo${originalPhotoFiles.length === 1 ? "" : "s"}…`;
-    }
-
-    const zipBlob = await zip.generateAsync({
-      type: "blob",
-      compression: "STORE"
-    });
-
-    if (progressButton) {
-      progressButton.textContent = "Opening Share Sheet…";
-    }
-
-    const baseName = result.filename.replace(/\.pdf$/i, "");
-    const zipFile = new File(
-      [zipBlob],
-      `${baseName} - Export Package.zip`,
-      { type: "application/zip" }
-    );
-
-    if (navigator.share && navigator.canShare) {
-      try {
-        const shareData = {
-          title: result.title,
-          files: [zipFile]
-        };
-
-        if (navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          return "shared-package";
-        }
-      } catch (error) {
-        if (error?.name === "AbortError") return "cancelled";
-        console.warn("ZIP share failed; using download fallback.", error);
-      }
-    }
-
-    downloadFile(zipFile);
-    return "downloaded-package";
-  }
-
-  // PDF-only export
   if (navigator.share && navigator.canShare) {
     try {
       const shareData = {
@@ -1812,49 +1777,42 @@ async function createPdfReadyReport() {
     includeSatisfactory: qs("#exportIncludeSatisfactory").checked,
     includeNA: qs("#exportIncludeNA").checked,
     includePhotos: qs("#exportIncludePhotos").checked,
-    includeOriginalPhotos: qs("#exportIncludeOriginalPhotos")?.checked ?? true,
     includeGuidance: qs("#exportIncludeGuidance").checked
   };
 
   const button = qs("#createPdfReport");
   const original = button.textContent;
+  let inspectionSaveFailed = false;
 
   try {
     button.disabled = true;
     button.textContent = "Creating PDF…";
-    await saveCurrentInspection(false);
+    try {
+      await saveCurrentInspection(false);
+    } catch (error) {
+      inspectionSaveFailed = true;
+      console.error("Could not save inspection before export:", error);
+    }
 
     const result = await generateInspectionPdf(options);
-    const originalPhotoFiles = options.includeOriginalPhotos
-      ? await collectOriginalPhotoFiles()
-      : [];
-
-    button.textContent = originalPhotoFiles.length
-      ? `Preparing ${originalPhotoFiles.length} photo${originalPhotoFiles.length === 1 ? "" : "s"}…`
-      : "Opening Share Sheet…";
-
-    const outcome = await shareOrDownloadPdf(result, originalPhotoFiles);
+    button.textContent = "Opening Share Sheet…";
+    const outcome = await shareOrDownloadPdf(result);
 
     if (outcome === "shared") {
       closeExportModal();
-      showSaveNotice("PDF shared.");
-    } else if (outcome === "shared-package") {
-      closeExportModal();
-      showSaveNotice("Export package shared.");
-    } else if (outcome === "downloaded-package") {
-      closeExportModal();
-      showSaveNotice("Export package downloaded.");
+      showSaveNotice(inspectionSaveFailed
+        ? "PDF shared. The inspection could not be saved in this browser."
+        : "PDF shared.");
     } else if (outcome === "downloaded") {
       closeExportModal();
-      showSaveNotice("PDF downloaded.");
+      showSaveNotice(inspectionSaveFailed
+        ? "PDF downloaded. The inspection could not be saved in this browser."
+        : "PDF downloaded.");
     }
   } catch (error) {
     console.error("PDF export failed:", error);
-    if (!window.jspdf?.jsPDF) {
-      alert("The PDF generator did not load. Check the internet connection and reload the app.");
-    } else {
-      alert("The inspection export could not be completed. Try exporting again. If it continues, turn off 'Include inspection photos as separate files' to confirm the PDF-only export works.");
-    }
+    const detail = error instanceof Error ? error.message : String(error);
+    alert(`The inspection report could not be completed. ${detail}`);
   } finally {
     button.disabled = false;
     button.textContent = original;
