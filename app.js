@@ -1086,6 +1086,7 @@ function blobToDataURL(blob) {
 }
 
 async function buildReportHTML(options) {
+  const logoDataUrl = await loadReportLogoDataUrl();
   const address = qs("#propertyAddress")?.value?.trim() || "";
   const owner = qs("#ownerInsured")?.value?.trim() || "";
   const date = qs("#inspectionDate")?.value || "";
@@ -1123,7 +1124,7 @@ async function buildReportHTML(options) {
     const rows = [];
     for (const item of items) {
       let photoHTML = "";
-      if (options.includePhotos && item.photoBlob) {
+      if (item.photoBlob) {
         try {
           const src = await blobToDataURL(item.photoBlob);
           if (src) {
@@ -1235,9 +1236,19 @@ async function buildReportHTML(options) {
     background:white;
   }
   .report-header {
+    position:relative;
+    padding-right:1.05in;
     border-bottom:3px solid #303840;
     padding-bottom:12px;
     margin-bottom:16px;
+  }
+  .report-logo {
+    position:absolute;
+    top:0;
+    right:0;
+    width:.9in;
+    height:auto;
+    object-fit:contain;
   }
   .report-header h1 {
     margin:0 0 3px;
@@ -1353,7 +1364,8 @@ async function buildReportHTML(options) {
 <body>
   <header class="report-header">
     <h1>PEI Mutual Residential Rental Inspection</h1>
-    <div class="subtitle">Existing Residential Rental Building — Insurance Risk Inspection Report</div>
+    <div class="subtitle">Insurance Risk Inspection Report</div>
+    <img class="report-logo" src="${logoDataUrl}" alt="PEI Mutual logo">
 
     <div class="property-grid">
       <div class="property-row"><strong>Property:</strong> ${escapeHTML(address)}</div>
@@ -1410,6 +1422,12 @@ function photoFormat(blob) {
   return "JPEG";
 }
 
+async function loadReportLogoDataUrl() {
+  const response = await fetch("images/pei-mutual-logo.png");
+  if (!response.ok) throw new Error("The PEI Mutual logo could not be loaded.");
+  return blobToDataURL(await response.blob());
+}
+
 async function generateInspectionPdf(options) {
   if (!window.jspdf?.jsPDF) throw new Error("PDF library did not load.");
 
@@ -1437,6 +1455,7 @@ async function generateInspectionPdf(options) {
   const nbccPart = getNBCCPartResult();
   const year = qs("#yearConstructed")?.value || "";
   const buildingType = qs("#buildingType")?.value || "";
+  const logoDataUrl = await loadReportLogoDataUrl();
 
   function newPage() { doc.addPage(); y = margin; }
   function ensureSpace(h) { if (y + h > bottom) newPage(); }
@@ -1477,11 +1496,29 @@ async function generateInspectionPdf(options) {
     doc.text(lines, x + labelWidth, y);
   }
 
-  addText("PEI Mutual Residential Rental Inspection", margin, { size: 17, style: "bold", lineHeight: 1.05 });
-  addText("Existing Residential Rental Building — Insurance Risk Inspection Report", margin, {
-    size: 9, color: [90, 100, 108], lineHeight: 1.15
+  const logoWidth = 82;
+  const logoProperties = doc.getImageProperties(logoDataUrl);
+  const logoHeight = logoWidth * logoProperties.height / logoProperties.width;
+  const logoTop = margin - 18;
+  doc.addImage(
+    logoDataUrl,
+    "PNG",
+    pageWidth - margin - logoWidth,
+    logoTop,
+    logoWidth,
+    logoHeight,
+    undefined,
+    "FAST"
+  );
+
+  const titleWidth = contentWidth - logoWidth - 12;
+  addText("PEI Mutual Residential Rental Inspection", margin, {
+    size: 17, style: "bold", maxWidth: titleWidth, lineHeight: 1.05
   });
-  y += 8;
+  addText("Insurance Risk Inspection Report", margin, {
+    size: 9, color: [90, 100, 108], maxWidth: titleWidth, lineHeight: 1.15
+  });
+  y = Math.max(y + 8, logoTop + logoHeight + 10);
 
   const colW = contentWidth / 2 - 8;
   [
@@ -1508,7 +1545,7 @@ async function generateInspectionPdf(options) {
     margin + 8,
     { size: 7.4, maxWidth: contentWidth - 16, color: [60, 68, 76], lineHeight: 1.16 }
   );
-  y += 10;
+  y += 24;
 
   for (const section of qsa(".inspection-section")) {
     const title = getSectionTitle(section);
@@ -1570,7 +1607,7 @@ async function generateInspectionPdf(options) {
         y += 4;
       }
 
-      if (options.includePhotos && item.photoBlob) {
+      if (item.photoBlob) {
         try {
           const article = [...section.querySelectorAll(".inspection-item")].find(a =>
             (a.querySelector(".item-title")?.textContent?.trim() || "") === item.title
@@ -1776,7 +1813,6 @@ async function createPdfReadyReport() {
   const options = {
     includeSatisfactory: qs("#exportIncludeSatisfactory").checked,
     includeNA: qs("#exportIncludeNA").checked,
-    includePhotos: qs("#exportIncludePhotos").checked,
     includeGuidance: qs("#exportIncludeGuidance").checked
   };
 
