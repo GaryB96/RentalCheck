@@ -5,7 +5,7 @@ button,input,textarea,select{font:inherit}
 .app-header{position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:16px 22px;background:white;border-bottom:1px solid var(--border);box-shadow:0 1px 6px rgba(0,0,0,.05)}
 .app-header h1{margin:0;font-size:1.35rem}.subtitle{margin:3px 0;color:var(--muted)}.standards-line{margin:8px 0 4px;font-size:.82rem;color:#4b5563;line-height:1.4}
 .app-header p2{margin:0; font-size: small; color: #303840;}
-.header-actions{display:flex;gap:8px;flex-shrink:0}.inspection-container{max-width:1050px;margin:0 auto;padding:18px}
+.header-actions{display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0}.inspection-container{max-width:1050px;margin:0 auto;padding:18px}
 .primary-button,.secondary-button,.text-button,.photo-button{min-height:44px;padding:9px 14px;border-radius:9px;cursor:pointer}
 .primary-button{background:var(--dark);color:#fff;border:1px solid var(--dark)}.secondary-button{background:#fff;border:1px solid #aeb7bf}.text-button{background:transparent;border:0;padding:3px 0;min-height:auto;color:#374151;text-decoration:underline}
 .standards-panel{margin-top:10px;padding:12px 15px;background:#f7f8fa;border:1px solid var(--border);border-radius:9px;font-size:.86rem;max-width:850px}.standards-panel ul{columns:2;margin:7px 0;padding-left:22px}.important-note{padding:10px;background:#fff;border-left:4px solid #6b7280}

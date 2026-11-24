@@ -46,6 +46,7 @@
       <button id="newInspection" class="secondary-button" type="button">New</button>
       <button id="openInspection" class="secondary-button" type="button">Open</button>
       <button id="saveInspection" class="primary-button" type="button">Save</button>
+      <button id="transferInspection" class="secondary-button" type="button">Transfer</button>
       <button id="exportInspection" class="primary-button" type="button">Export</button>
     </div>
   </div>
@@ -344,6 +345,30 @@
   </div>
 </div>
 
+<div id="transferModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="transferTitle">
+  <div class="modal-card export-modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 id="transferTitle">Transfer Inspection</h2>
+        <p>Move an editable inspection between devices.</p>
+      </div>
+      <button id="closeTransferModal" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="export-help">
+      <p>The transfer file includes inspection answers, selections, notes, and photos. On iPad, choose OneDrive in the share menu. On the other device, open this app and import the downloaded file.</p>
+      <p>Transfer files contain sensitive property information. Store and share them securely.</p>
+    </div>
+
+    <div class="modal-footer">
+      <button id="cancelTransfer" class="secondary-button" type="button">Close</button>
+      <button id="importTransfer" class="secondary-button" type="button">Import File</button>
+      <button id="exportTransfer" class="primary-button" type="button">Export File</button>
+    </div>
+    <input id="transferFileInput" class="hidden" type="file" accept=".json,application/json">
+  </div>
+</div>
+
 
 <div id="exportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
   <div class="modal-card export-modal-card">
@@ -418,6 +443,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/inspection-rules.js"></script>
-<script src="app.js?v=pdf-logo-20261123"></script>
+<script src="app.js?v=inspection-transfer-20261123"></script>
 </body>
 </html>

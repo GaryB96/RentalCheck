@@ -2,6 +2,8 @@ const DB_NAME = "peiMutualResidentialRentalInspectionDB";
 const DB_VERSION = 1;
 const STORE_NAME = "inspections";
 const SQ_FEET_PER_SQUARE_METRE = 10.763910416709722;
+const TRANSFER_FORMAT = "pei-mutual-rental-inspection";
+const TRANSFER_VERSION = 1;
 
 const qs = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
@@ -1085,6 +1087,27 @@ function blobToDataURL(blob) {
   });
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("The transfer file could not be read."));
+    reader.readAsText(file);
+  });
+}
+
+function dataURLToBlob(dataUrl) {
+  const match = /^data:(image\/[^;,]+);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!match) throw new Error("The transfer file contains an invalid photo.");
+
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: match[1] });
+}
+
 async function buildReportHTML(options) {
   const logoDataUrl = await loadReportLogoDataUrl();
   const address = qs("#propertyAddress")?.value?.trim() || "";
@@ -1864,6 +1887,125 @@ function closeExportModal() {
   qs("#exportModal").classList.add("hidden");
 }
 
+function openTransferModal() {
+  qs("#transferModal").classList.remove("hidden");
+}
+
+function closeTransferModal() {
+  qs("#transferModal").classList.add("hidden");
+}
+
+async function exportTransferFile() {
+  const items = await Promise.all(serializeItems().map(async item => {
+    const { photoBlob, ...serializedItem } = item;
+    return {
+      ...serializedItem,
+      photoDataUrl: photoBlob ? await blobToDataURL(photoBlob) : ""
+    };
+  }));
+  const payload = {
+    format: TRANSFER_FORMAT,
+    version: TRANSFER_VERSION,
+    exportedAt: new Date().toISOString(),
+    fields: serializeFields(),
+    items
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const address = qs("#propertyAddress")?.value?.trim() || "";
+  const owner = qs("#ownerInsured")?.value?.trim() || "";
+  const date = qs("#inspectionDate")?.value || new Date().toISOString().slice(0, 10);
+  const filename = safeFileName(
+    [owner, address, "Rental Inspection", date].filter(Boolean).join(" - ")
+  ) + " - Transfer.json";
+  const file = new File([json], filename, {
+    type: "application/json",
+    lastModified: Date.now()
+  });
+
+  if (navigator.share && navigator.canShare) {
+    try {
+      const shareData = { title: filename, files: [file] };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return "shared";
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") return "cancelled";
+      console.warn("Transfer file sharing failed; using download fallback.", error);
+    }
+  }
+
+  downloadFile(file);
+  return "downloaded";
+}
+
+function validateTransferPayload(payload) {
+  if (!payload || payload.format !== TRANSFER_FORMAT || payload.version !== TRANSFER_VERSION) {
+    throw new Error("This is not a supported inspection transfer file.");
+  }
+  if (!payload.fields || typeof payload.fields !== "object" || Array.isArray(payload.fields)) {
+    throw new Error("The transfer file is missing inspection fields.");
+  }
+  if (!Array.isArray(payload.items)) {
+    throw new Error("The transfer file is missing inspection items.");
+  }
+
+  const validStatuses = new Set(["", "S", "D", "IC", "R", "NI", "NA"]);
+  payload.items.forEach(item => {
+    if (!item || !Number.isInteger(item.index) || item.index < 0 ||
+        typeof item.title !== "string" ||
+        typeof item.observation !== "string" ||
+        typeof item.photoName !== "string" ||
+        !validStatuses.has(item.status) ||
+        typeof item.photoDataUrl !== "string") {
+      throw new Error("The transfer file contains an invalid inspection item.");
+    }
+    if (item.photoDataUrl && !/^data:image\/[^;,]+;base64,/.test(item.photoDataUrl)) {
+      throw new Error("The transfer file contains an invalid photo.");
+    }
+  });
+}
+
+async function importTransferFile(file) {
+  const payload = JSON.parse(await readFileAsText(file));
+  validateTransferPayload(payload);
+  const items = payload.items.map(item => {
+    const { photoDataUrl, ...serializedItem } = item;
+    return {
+      ...serializedItem,
+      photoBlob: photoDataUrl ? dataURLToBlob(photoDataUrl) : null
+    };
+  });
+
+  if (isDirty && !currentInspectionId) {
+    const proceed = confirm("This inspection has unsaved changes. Import another inspection and discard them?");
+    if (!proceed) return false;
+  } else if (isDirty && currentInspectionId) {
+    await saveCurrentInspection(false);
+  }
+
+  resetFormVisuals();
+  restoreFields(payload.fields);
+  restoreItems(items);
+  currentInspectionId = null;
+  currentCreatedAt = null;
+  isDirty = true;
+
+  updateCrawl();
+  updateNBCCPart();
+  updateSprinklerSection();
+  updateFireAlarmQuestions();
+  updateCO();
+  updateAllSectionNAButtons();
+  updateCurrentInspectionLabel();
+
+  await saveCurrentInspection(false);
+  closeTransferModal();
+  showSaveNotice("Transfer file imported and saved on this device.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  return true;
+}
+
 
 // ------------------------------
 // EVENT WIRING
@@ -1912,15 +2054,56 @@ function wireInputs() {
   qs("#openInspection").addEventListener("click", openOpenModal);
   qs("#newInspection").addEventListener("click", startNewInspection);
   qs("#exportInspection").addEventListener("click", openExportModal);
+  qs("#transferInspection").addEventListener("click", openTransferModal);
 
   qs("#closeOpenModal").addEventListener("click", closeOpenModal);
 
   qs("#closeExportModal").addEventListener("click", closeExportModal);
   qs("#cancelExport").addEventListener("click", closeExportModal);
   qs("#createPdfReport").addEventListener("click", createPdfReadyReport);
+  qs("#closeTransferModal").addEventListener("click", closeTransferModal);
+  qs("#cancelTransfer").addEventListener("click", closeTransferModal);
+  qs("#importTransfer").addEventListener("click", () => qs("#transferFileInput").click());
+  qs("#transferFileInput").addEventListener("change", async event => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    try {
+      await importTransferFile(file);
+    } catch (error) {
+      console.error("Could not import inspection transfer file:", error);
+      alert(`The transfer file could not be imported. ${error?.message || "Check that it is a valid inspection file."}`);
+    }
+  });
+  qs("#exportTransfer").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = "Preparing File…";
+    try {
+      const outcome = await exportTransferFile();
+      if (outcome === "cancelled") return;
+      closeTransferModal();
+      showSaveNotice(outcome === "shared"
+        ? "Transfer file shared. Choose OneDrive to save it."
+        : "Transfer file downloaded. Upload it to OneDrive to transfer devices.");
+    } catch (error) {
+      console.error("Could not export inspection transfer file:", error);
+      alert(`The transfer file could not be created. ${error?.message || "Try again."}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  });
 
   qs("#exportModal").addEventListener("click", event => {
     if (event.target === qs("#exportModal")) closeExportModal();
+  });
+
+  qs("#transferModal").addEventListener("click", event => {
+    if (event.target === qs("#transferModal")) closeTransferModal();
   });
 
   qs("#openInspectionModal").addEventListener("click", event => {
@@ -1935,6 +2118,7 @@ function wireInputs() {
     if (event.key !== "Escape") return;
     if (!qs("#openInspectionModal").classList.contains("hidden")) closeOpenModal();
     if (!qs("#exportModal").classList.contains("hidden")) closeExportModal();
+    if (!qs("#transferModal").classList.contains("hidden")) closeTransferModal();
   });
 }
 

@@ -15,6 +15,7 @@ Main features
 - Mobile-friendly PWA interface that can be installed on a supported device
 - New, open, and local save of inspections using browser IndexedDB storage
 - Automatic saving as the inspection is edited
+- JSON transfer files for moving editable inspections, including photos, between devices
 - Property, fire-safety, and building-condition checklists
 - Optional photo capture or photo-library selection
 - Print-ready PDF/report export with selectable report content
@@ -23,14 +24,24 @@ Main features
 Exporting on iPad or iPhone
 1. Tap Export.
 2. Select the report sections and details to include.
-3. Tap Create PDF Report.
-4. In Safari print preview, pinch outward and tap Share.
-5. Save to Files, iCloud Drive, OneDrive, or another destination.
+3. Tap Create & Share PDF.
+4. Choose OneDrive, Files, or another destination in the Share Sheet.
+
+Transferring an inspection between devices
+1. On the first device, tap Transfer, then Export File.
+2. Share the JSON transfer file to OneDrive, or download it and upload it there.
+3. On the other device, open the same app, tap Transfer, then Import File.
+4. Select the transfer file from OneDrive or the device's Files/Downloads location.
+
+The transfer file contains editable inspection data and attached photos. Importing
+it creates a local copy on the receiving device.
 
 Data and privacy
 Inspection records and photos are stored locally in the current browser and are
 not uploaded to an application server. Clearing browser data can remove saved
-inspections, so export important reports or create backups as needed.
+inspections, so export important reports or create transfer-file backups as needed.
+Transfer files may contain sensitive property information; store and share them
+securely.
 
 Deployment
 Host the RentalCheck folder through a static web server or GitHub Pages. Keep
