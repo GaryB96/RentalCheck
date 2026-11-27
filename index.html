@@ -43,6 +43,7 @@
   <div class="header-actions-wrap">
     <div id="currentInspectionLabel" class="current-inspection-label">New inspection</div>
     <div class="header-actions">
+      <button id="buildingGrade" class="secondary-button" type="button">Building Grade</button>
       <button id="newInspection" class="secondary-button" type="button">New</button>
       <button id="openInspection" class="secondary-button" type="button">Open</button>
       <button id="saveInspection" class="primary-button" type="button">Save</button>
@@ -78,7 +79,9 @@
         <label>Inspection Date<input type="date" id="inspectionDate"></label>
         <label>Number of Dwelling Units<input type="number" id="dwellingUnits" min="1"></label>
         <label>Number of Storeys Above Grade<input type="number" id="storeys" min="1"></label>
-        <label>Footprint of Largest Storey (sq ft)<input type="number" id="largestStoreyArea" min="1" step="any"></label>
+        <label>Building length (ft)<input type="number" id="buildingLength" min="0.1" step="any"></label>
+        <label>Building width (ft)<input type="number" id="buildingWidth" min="0.1" step="any"></label>
+        <input type="hidden" id="largestStoreyArea">
         <fieldset class="property-radio-group">
           <legend>Sprinklered?</legend>
           <div class="choice-grid">
@@ -89,8 +92,10 @@
         <label>Construction type?
           <select id="constructionType">
             <option value="">Select…</option>
-            <option value="Combustible">Combustible</option>
-            <option value="Noncombustible">Noncombustible</option>
+            <option value="Concrete / steel">Concrete / steel</option>
+            <option value="Masonry / wood hybrid">Masonry / wood hybrid</option>
+            <option value="Wood frame">Wood frame</option>
+            <option value="Balloon frame">Balloon frame</option>
           </select>
         </label>
         <label>Year Constructed<input type="number" id="yearConstructed" min="1800" max="2100"></label>
@@ -103,7 +108,7 @@
           </select>
         </label>
       </div>
-      <div id="nbccPartFlag" class="rule-alert neutral">Enter the number of storeys above grade and largest storey footprint to screen whether NBCC Part 3 or Part 9 may apply.</div>
+      <div id="nbccPartFlag" class="rule-alert neutral">Enter the number of storeys above grade and building length and width to screen whether NBCC Part 3 or Part 9 may apply. The largest-storey footprint is calculated from length × width.</div>
       <div class="subsection">
         <h3>Foundation / Below-Grade Space</h3>
         <div class="choice-grid">
@@ -247,12 +252,19 @@
 
       <div class="subsection important-subsection">
         <h3>Building Fire Alarm System — Applicability Guide</h3>
-        <h4>Is there a central fire alarm system?</h4>
+        <h4>Is there a fire alarm system?</h4>
         <div class="choice-grid">
           <label><input id="centralFireAlarmYes" type="radio" name="centralFireAlarm" value="yes"> Yes</label>
           <label><input id="centralFireAlarmNo" type="radio" name="centralFireAlarm" value="no"> No</label>
         </div>
         <div id="fireAlarmQuestions" class="hidden">
+          <fieldset class="property-radio-group">
+            <legend>System type</legend>
+            <div class="choice-grid">
+              <label><input id="fireAlarmLocal" type="radio" name="fireAlarmSystemType" value="local"> Local system</label>
+              <label><input id="fireAlarmMonitored" type="radio" name="fireAlarmSystemType" value="monitored"> Monitored (dials out)</label>
+            </div>
+          </fieldset>
           <div class="items-container" data-items="alarm"></div>
         </div>
       </div>
@@ -269,11 +281,12 @@
       <div class="subsection important-subsection">
         <h3>Portable Fire Extinguishers — Applicability Guide</h3>
         <div class="rule-alert neutral">Do not apply a blanket rule that every individual apartment must contain a portable fire extinguisher.</div>
+        <p>Select all observed locations. “None observed” and “Applicability uncertain” do not earn location points.</p>
         <div class="choice-grid">
-          <label><input type="checkbox"> Common corridor / common area</label><label><input type="checkbox"> Mechanical / furnace room</label>
-          <label><input type="checkbox"> Laundry / utility area</label><label><input type="checkbox"> Electrical / service area</label>
-          <label><input type="checkbox"> Parking / garage area</label><label><input type="checkbox"> None observed</label>
-          <label><input type="checkbox"> Applicability uncertain</label>
+          <label><input type="checkbox" class="fire-extinguisher-location"> Common corridor / common area</label><label><input type="checkbox" class="fire-extinguisher-location"> Mechanical / furnace room</label>
+          <label><input type="checkbox" class="fire-extinguisher-location"> Laundry / utility area</label><label><input type="checkbox" class="fire-extinguisher-location"> Electrical / service area</label>
+          <label><input type="checkbox" class="fire-extinguisher-location"> Parking / garage area</label><label><input type="checkbox" class="fire-extinguisher-no-score"> None observed</label>
+          <label><input type="checkbox" class="fire-extinguisher-no-score"> Applicability uncertain</label>
         </div>
         <div class="items-container" data-items="extinguishers"></div>
       </div>
@@ -323,6 +336,27 @@
   </details>
 </main>
 
+<div id="buildingGradeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="buildingGradeTitle">
+  <div class="modal-card grade-modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 id="buildingGradeTitle">Building Grade</h2>
+        <p>Complete the applicable property and owner/inspector assessments. Answers are saved with this inspection.</p>
+      </div>
+      <button id="closeBuildingGrade" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="grade-modal-body">
+      <div id="buildingGradeScores" class="grade-scores" aria-live="polite"></div>
+      <p class="grade-score-direction">Higher scores indicate lower risk or stronger protection.</p>
+      <div id="buildingGradeMissing" class="rule-alert warning" role="status"></div>
+      <div id="buildingGradeFields"></div>
+      <div id="gradeAreaEstimate" class="rule-alert neutral">Enter building length and width in Section 1, plus above-grade storeys, to calculate total floor area.</div>
+    </div>
+    <div class="modal-footer">
+      <button id="closeBuildingGradeFooter" class="secondary-button" type="button">Back to Inspection</button>
+    </div>
+  </div>
+</div>
 
 <div id="openInspectionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="openInspectionTitle">
   <div class="modal-card">
@@ -395,6 +429,14 @@
         <label class="export-option">
           <input type="checkbox" id="exportIncludeGuidance">
           Include inspector/code guidance notes
+        </label>
+        <label class="export-option">
+          <input type="checkbox" id="exportIncludeGradeScores" checked>
+          Include building grade main scores
+        </label>
+        <label class="export-option">
+          <input type="checkbox" id="exportIncludeGradeBreakdown">
+          Include full building grade breakdown
         </label>
       </div>
 

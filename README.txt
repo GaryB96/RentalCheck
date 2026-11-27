@@ -17,6 +17,7 @@ Main features
 - Automatic saving as the inspection is edited
 - JSON transfer files for moving editable inspections, including photos, between devices
 - Property, fire-safety, and building-condition checklists
+- Building grading for base risk, fire-control effectiveness, and public protection, with grading answers saved in each inspection
 - Optional photo capture or photo-library selection
 - Print-ready PDF/report export with selectable report content
 - Links to applicable code and inspection reference documents
@@ -44,6 +45,35 @@ enable its location from Files > Browse > More > Edit.
 
 The transfer file contains editable inspection data and attached photos. Importing
 it creates a local copy on the receiving device.
+
+Building grading
+1. Select Building Grade from the inspection header.
+2. Complete the property measurements and grading questions. Existing property
+   answers for construction, units, storeys, and sprinkler status are reused.
+3. Review the three scores and any missing-answer warning. A score remains
+   provisional until its required answers are complete.
+4. In Export, include the main grade scores, the full grading breakdown, or both.
+
+The base risk score is out of 5 and uses Fire Severity (40%), Fire Probability
+(25%), Water Damage Exposure (20%), and Management (15%). Fire Control
+Effectiveness is out of 10.5; Public Protection is out of 8. Fire Control
+Effectiveness adds 0.5 points for each of the five portable-extinguisher
+locations selected in Section 7. “None observed” and “Applicability uncertain”
+add no points, but either counts as an answered extinguisher assessment.
+Grading answers are stored with the inspection and included in transfer files.
+Higher scores indicate lower risk or stronger protection.
+
+Enter building length and width in feet in Section 1. For the estimate, the app
+assumes a rectangular footprint: length × width. It estimates total floor area
+as above-grade storeys × (length × width), and shows the formula with the result
+in Building Grade. The dwelling-unit bands use 25–49 units for 2 points and 50
+or more for 1 point. Adjacent-building material modifies the distance score only
+when the distance is under 80 ft.
+Partial sprinkler coverage is selected separately when the Property Information
+sprinkler answer is No; Public Protection then uses the non-sprinklered
+fire-hall bands.
+The Section 7 fire-alarm answer also feeds Fire Control Effectiveness: no system
+scores 0, local scores 1, and monitored (dials out) scores 2.
 
 Data and privacy
 Inspection records and photos are stored locally in the current browser and are

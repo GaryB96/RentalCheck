@@ -5,6 +5,151 @@ const SQ_FEET_PER_SQUARE_METRE = 10.763910416709722;
 const TRANSFER_FORMAT = "pei-mutual-rental-inspection";
 const TRANSFER_VERSION = 1;
 
+const buildingGradeCategories = [
+  {
+    key: "severity", title: "Fire Severity", weight: 0.4, factors: [
+      { key: "construction", title: "Construction type", weight: 0.35, source: "constructionType", options: [
+        ["Concrete / steel", 4], ["Masonry / wood hybrid", 3], ["Wood frame", 2], ["Balloon frame", 1]
+      ]},
+      { key: "buildingArea", title: "Estimated total floor area", weight: 0.25, source: "area" },
+      { key: "fireLoad", title: "Fire load", weight: 0.15, options: [
+        ["Very low combustibles / excellent housekeeping", 5],
+        ["Above average housekeeping / limited storage", 4],
+        ["Typical apartment occupancy and contents", 3],
+        ["Significant storage / combustible accumulations", 2],
+        ["Heavy storage / hoarding / numerous indoor e-bikes or scooters", 1]
+      ]},
+      { key: "adjacentExposure", title: "Distance to closest adjacent building", weight: 0.15, source: "adjacentExposure" },
+      { key: "stories", title: "Number of storeys above grade", weight: 0.05, source: "stories" },
+      { key: "units", title: "Number of dwelling units", weight: 0.05, source: "units" }
+    ]
+  },
+  {
+    key: "probability", title: "Fire Probability", weight: 0.25, factors: [
+      { key: "electrical", title: "Electrical system age / condition", weight: 0.30, options: [
+        ["Modern service and wiring, less than 20 years", 5],
+        ["Major electrical upgrades completed", 4],
+        ["Old system, well maintained", 3],
+        ["Aging system, concerns noted", 2],
+        ["Very old / ungrounded / cloth wiring / major deficiencies", 1]
+      ]},
+      { key: "heating", title: "Heating system", weight: 0.20, options: [
+        ["Electric baseboard / ductless heat pump", 4],
+        ["Modern central hot water / forced air", 3],
+        ["Aging central hot water / forced air", 2],
+        ["Solid fuel", 1]
+      ]},
+      { key: "tenantProfile", title: "Tenant profile", weight: 0.15, options: [
+        ["Mature, long term", 5], ["Stable mix, low turnover", 4], ["Typical occupancy", 3],
+        ["High turnover", 2], ["Social issues / transient occupancy / repeated incidents", 1]
+      ]},
+      { key: "smokingControls", title: "Smoking controls", weight: 0.15, options: [
+        ["Smoke-free property", 5], ["Smoke-free with minor exceptions", 4],
+        ["Designated smoking areas", 3], ["Smoking permitted", 2], ["No controls / indoor smoking", 1]
+      ]},
+      { key: "housekeeping", title: "Housekeeping in common / storage / service areas", weight: 0.10, options: [
+        ["Excellent", 5], ["Good", 4], ["Average", 3], ["Below average", 2], ["Poor", 1]
+      ]},
+      { key: "historicalLosses", title: "Historical fire losses", weight: 0.10, options: [
+        ["No fire-related losses", 5], ["Minor isolated loss", 4], ["One moderate loss", 3],
+        ["Multiple losses / repeated deficiencies", 2], ["Significant fire loss history", 1]
+      ]}
+    ]
+  },
+  {
+    key: "water", title: "Water Damage Exposure", weight: 0.20, factors: [
+      { key: "plumbing", title: "Plumbing age / condition", weight: 0.30, options: [
+        ["Modern / no leak history / proactive replacement", 5],
+        ["Well maintained / localized updates", 4],
+        ["Original, functioning, no concerns", 3],
+        ["Aging / repairs / occasional leaks or concerns", 2],
+        ["Frequent issues / deteriorated piping / deficiencies", 1]
+      ]},
+      { key: "maintenance", title: "Maintenance quality", weight: 0.20, options: [
+        ["Excellent preventative program", 5], ["Good maintenance with documentation", 4],
+        ["Average", 3], ["Reactive", 2], ["Evidence of deferred maintenance", 1]
+      ]},
+      { key: "roof", title: "Roof age / condition", weight: 0.15, options: [
+        ["New, less than 5 years", 5], ["Good condition, no concerns", 4],
+        ["Some aging, still serviceable", 3], ["Near replacement", 2], ["Poor / active leaks", 1]
+      ]},
+      { key: "leakDetection", title: "Leak detection", weight: 0.15, options: [
+        ["Comprehensive detection and monitoring", 5], ["Detection in critical areas", 4],
+        ["Mechanical rooms only", 3], ["Minimal", 2], ["No detection", 1]
+      ]},
+      { key: "occupancyMonitoring", title: "Occupancy monitoring", weight: 0.10, options: [
+        ["On-site management / daily oversight", 5], ["Frequent inspections", 4],
+        ["Typical occupancy", 3], ["Many vacant units / infrequent inspections", 2],
+        ["Seasonal / largely unattended", 1]
+      ]},
+      { key: "verticalExposure", title: "Vertical exposure", weight: 0.10, source: "stories" }
+    ]
+  },
+  {
+    key: "management", title: "Management", weight: 0.15, factors: [
+      { key: "deficiencyTracking", title: "Deficiency tracking and correction", weight: 0.35, options: [
+        ["Formal tracking with documented completion", 5],
+        ["Tracked and corrected in a timely manner", 4], ["Informal process, generally addressed", 3],
+        ["Recurring deficiencies / delayed corrections", 2], ["Unresolved deficiencies", 1]
+      ]},
+      { key: "capitalReserve", title: "Capital reserve plan", weight: 0.25, options: [
+        ["Formal plan and funding strategy", 5], ["Documented replacement planning", 4],
+        ["General awareness of upcoming needs", 3], ["Limited planning", 2], ["No evidence of planning", 1]
+      ]},
+      { key: "annualInspection", title: "Annual inspection program", weight: 0.25, options: [
+        ["Comprehensive documented inspection program", 5],
+        ["Regular inspections of critical systems", 4], ["Basic inspection program", 3],
+        ["Inconsistent inspections", 2], ["No inspection process", 1]
+      ]},
+      { key: "emergencyPreparedness", title: "Emergency preparedness and response", weight: 0.15, options: [
+        ["Documented emergency procedures", 5], ["Procedures for major exposures", 4],
+        ["Basic procedures", 3], ["Limited procedures", 2], ["No documented procedures", 1]
+      ]}
+    ]
+  }
+];
+
+const buildingGradeChoiceFields = [
+  {
+    key: "fireLoad", label: "Fire load", options: buildingGradeCategories[0].factors[2].options
+  },
+  {
+    key: "adjacentDistance", label: "Adjacent-building distance", options: [
+      [">= 80 ft", "80plus"], ["60–79 ft", "60to79"], ["40–59 ft", "40to59"],
+      ["20–39 ft", "20to39"], ["< 20 ft", "under20"]
+    ]
+  },
+  {
+    key: "adjacentMaterial", label: "Closest building exposure material", options: [
+      ["Combustible", "combustible"], ["Non-combustible", "noncombustible"]
+    ]
+  },
+  ...buildingGradeCategories.slice(1).flatMap(category => category.factors
+    .filter(factor => factor.options)
+    .map(factor => ({ key: factor.key, label: factor.title, options: factor.options }))),
+  {
+    key: "heatingCondition", label: "Heating system condition modifier", options: [
+      ["New (+1)", 1], ["Average (0)", 0], ["Below average (-1)", -1], ["Poor (-2)", -2]
+    ]
+  },
+  {
+    key: "partialSprinkler", label: "Partial sprinkler system present", options: [["Yes", 1], ["No", 0]]
+  },
+  {
+    key: "annualFireTesting", label: "Documented annual fire-system testing", options: [["Yes", 1], ["No", 0]]
+  },
+  {
+    key: "fireHallDistance", label: "Distance to fire hall", options: [
+      ["Less than 5 km", "under5"], ["5–10 km", "5to10"], ["More than 10 km", "over10"]
+    ]
+  },
+  {
+    key: "hydrantDistance", label: "Distance to hydrant", options: [
+      ["Less than 150 m", "under150"], ["150–300 m", "150to300"], ["More than 300 m", "over300"]
+    ]
+  }
+];
+
 const qs = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
 
@@ -492,15 +637,41 @@ function updateCrawl() {
 }
 
 function getLargestStoreyFootprint() {
-  const value = qs("#largestStoreyArea")?.value;
-  if (!value) return null;
+  const lengthValue = qs("#buildingLength")?.value;
+  const widthValue = qs("#buildingWidth")?.value;
+  let squareFeet;
 
-  const squareFeet = Number(value);
+  if (lengthValue || widthValue) {
+    if (!lengthValue || !widthValue) return null;
+    squareFeet = Number(lengthValue) * Number(widthValue);
+  } else {
+    const legacyValue = qs("#largestStoreyArea")?.value;
+    if (!legacyValue) return null;
+    squareFeet = Number(legacyValue);
+  }
+
   if (!Number.isFinite(squareFeet) || squareFeet <= 0) return null;
   return {
     squareFeet,
     squareMetres: squareFeet / SQ_FEET_PER_SQUARE_METRE
   };
+}
+
+function updateLargestStoreyFootprint() {
+  const lengthValue = qs("#buildingLength")?.value;
+  const widthValue = qs("#buildingWidth")?.value;
+  if (!lengthValue && !widthValue) return;
+
+  const footprintInput = qs("#largestStoreyArea");
+  if (!lengthValue || !widthValue) {
+    footprintInput.value = "";
+    return;
+  }
+
+  const squareFeet = Number(lengthValue) * Number(widthValue);
+  footprintInput.value = Number.isFinite(squareFeet) && squareFeet > 0
+    ? String(squareFeet)
+    : "";
 }
 
 function getNBCCPartResult() {
@@ -534,7 +705,7 @@ function updateNBCCPart() {
     : "rule-alert neutral";
   flag.innerHTML = result
     ? `<strong>${result.message}</strong><br><small>This screening uses storeys and largest-storey area only. Occupancy and other Code criteria may affect applicability; confirm with the authority having jurisdiction or a qualified code professional.</small>`
-    : "Enter the number of storeys above grade and largest storey footprint to determine the applicable NBCC Part.";
+    : "Enter the number of storeys above grade and building length and width to determine the applicable NBCC Part. The largest-storey footprint is calculated from length × width.";
 }
 
 function updateSprinklerSection() {
@@ -551,10 +722,356 @@ function getSprinkleredValue() {
   return "";
 }
 
+function gradeSelectMarkup(field) {
+  const options = field.options.map(([label, value]) =>
+    `<option value="${value}">${label}</option>`
+  ).join("");
+  return `<label>${field.label}<select id="grade-${field.key}" data-grade-key="${field.key}"><option value="">Select…</option>${options}</select></label>`;
+}
+
+function renderBuildingGradeFields() {
+  const container = qs("#buildingGradeFields");
+  if (!container || container.dataset.built) return;
+
+  const categoriesHTML = buildingGradeCategories.map(category => {
+    const factorsHTML = category.factors.map(factor => {
+      if (factor.source === "constructionType") {
+        return `<p class="grade-derived-field">${factor.title}: Scored from Construction type in Property Information</p>`;
+      }
+      if (factor.options) {
+        const field = buildingGradeChoiceFields.find(candidate => candidate.key === factor.key);
+        return field ? gradeSelectMarkup(field) : "";
+      }
+      if (factor.key === "adjacentExposure") {
+        return [
+          `<p class="grade-derived-field">Exposure material affects the score only when distance is less than 80 ft.</p>`,
+          gradeSelectMarkup(buildingGradeChoiceFields.find(field => field.key === "adjacentDistance")),
+          gradeSelectMarkup(buildingGradeChoiceFields.find(field => field.key === "adjacentMaterial"))
+        ].join("");
+      }
+      const sourceLabels = {
+        construction: "Scored from Construction type in Property Information",
+        buildingArea: "Calculated from Section 1 dimensions × above-grade storeys",
+        stories: "Scored from Number of Storeys Above Grade in Property Information",
+        units: "Scored from Number of Dwelling Units in Property Information",
+        verticalExposure: "Scored from Number of Storeys Above Grade in Property Information"
+      };
+      return `<p class="grade-derived-field">${factor.title}: ${sourceLabels[factor.key]}</p>`;
+    }).join("");
+
+    const condition = category.key === "probability"
+      ? gradeSelectMarkup(buildingGradeChoiceFields.find(field => field.key === "heatingCondition"))
+      : "";
+    return `<section class="grade-category"><h3>${category.title} <small>(${Math.round(category.weight * 100)}% of Base Risk Score)</small></h3><div class="form-grid">${factorsHTML}${condition}</div></section>`;
+  }).join("");
+
+  const fireControlFields = [
+    "partialSprinkler", "annualFireTesting"
+  ].map(key => {
+    const field = buildingGradeChoiceFields.find(candidate => candidate.key === key);
+    return gradeSelectMarkup(field);
+  }).join("");
+
+  container.innerHTML = `${categoriesHTML}
+    <section class="grade-category">
+      <h3>Fire Control Effectiveness <small>(out of 10.5)</small></h3>
+      <p>Sprinkler status is taken from Property Information. If the property is not fully sprinklered, indicate whether partial sprinkler coverage is present. Fire alarm status and type come from Section 7. Extinguishers score 0.5 points per checked location in Section 7; “None observed” and “Applicability uncertain” score zero.</p>
+      <div class="form-grid">${fireControlFields}</div>
+    </section>
+    <section class="grade-category">
+      <h3>Public Protection <small>(out of 8)</small></h3>
+      <p>Fire-hall distance scoring depends on sprinkler status. Hydrant distance is scored separately.</p>
+      <div class="form-grid">${buildingGradeChoiceFields.filter(field => ["fireHallDistance", "hydrantDistance"].includes(field.key)).map(gradeSelectMarkup).join("")}</div>
+    </section>`;
+
+  container.dataset.built = "true";
+  updateBuildingGrade();
+}
+
+function getEstimatedBuildingArea() {
+  const footprint = getLargestStoreyFootprint();
+  const stories = Number(qs("#storeys")?.value);
+  if (!footprint || !Number.isFinite(stories) || stories < 1) return null;
+  return footprint.squareFeet * stories;
+}
+
+function getBuildingAreaScore(area) {
+  if (area < 5000) return 5;
+  if (area <= 10000) return 4;
+  if (area <= 25000) return 3;
+  if (area <= 50000) return 2;
+  return 1;
+}
+
+function getStoryScore(value) {
+  const stories = Number(value);
+  if (!Number.isFinite(stories) || stories < 1) return null;
+  if (stories <= 2) return 5;
+  if (stories === 3) return 4;
+  if (stories === 4) return 3;
+  if (stories === 5) return 2;
+  return 1;
+}
+
+function getUnitScore(value) {
+  const units = Number(value);
+  if (!Number.isFinite(units) || units < 1) return null;
+  if (units <= 4) return 5;
+  if (units <= 12) return 4;
+  if (units <= 24) return 3;
+  if (units <= 49) return 2;
+  return 1;
+}
+
+function getGradeFactorScore(factor) {
+  if (factor.source === "constructionType") {
+    const option = factor.options.find(([value]) => value === qs("#constructionType")?.value);
+    return option ? option[1] : null;
+  }
+  if (factor.source === "stories") return getStoryScore(qs("#storeys")?.value);
+  if (factor.source === "units") return getUnitScore(qs("#dwellingUnits")?.value);
+  if (factor.source === "area") {
+    const area = getEstimatedBuildingArea();
+    return area === null ? null : getBuildingAreaScore(area);
+  }
+  if (factor.source === "adjacentExposure") {
+    const distance = qs("#grade-adjacentDistance")?.value;
+    const material = qs("#grade-adjacentMaterial")?.value;
+    const distanceScores = { "80plus": 5, "60to79": 4, "40to59": 3, "20to39": 2, under20: 1 };
+    if (!distance) return null;
+    const score = distanceScores[distance];
+    if (distance === "80plus") return score;
+    if (!material) return null;
+    return material === "noncombustible"
+      ? Math.min(5, score + 1)
+      : score;
+  }
+  const input = qs(`#grade-${factor.key}`);
+  if (!input || input.value === "") return null;
+  const option = factor.options.find(([, value]) => String(value) === input.value);
+  if (!option) return null;
+  let score = Number(option[1]);
+  if (factor.key === "heating") {
+    const modifier = qs("#grade-heatingCondition")?.value;
+    if (modifier === undefined || modifier === "") return null;
+    score = Math.max(1, Math.min(4, score + Number(modifier)));
+  }
+  return score;
+}
+
+function getGradeChoiceLabel(key) {
+  if (key === "fireAlarmType") return getFireAlarmSystemLabel();
+  const field = buildingGradeChoiceFields.find(candidate => candidate.key === key);
+  const value = qs(`#grade-${key}`)?.value;
+  const option = field?.options.find(([, optionValue]) => String(optionValue) === value);
+  return option?.[0] || "";
+}
+
+function getFireAlarmStatus() {
+  if (qs("#centralFireAlarmYes")?.checked) return "yes";
+  if (qs("#centralFireAlarmNo")?.checked) return "no";
+  return "";
+}
+
+function getFireAlarmSystemScore() {
+  const status = getFireAlarmStatus();
+  if (status === "no") return 0;
+  if (status !== "yes") return null;
+  if (qs("#fireAlarmMonitored")?.checked) return 2;
+  if (qs("#fireAlarmLocal")?.checked) return 1;
+  return null;
+}
+
+function getFireAlarmSystemLabel() {
+  const status = getFireAlarmStatus();
+  if (status === "no") return "No fire alarm";
+  if (status !== "yes") return "";
+  if (qs("#fireAlarmMonitored")?.checked) return "Monitored fire alarm";
+  if (qs("#fireAlarmLocal")?.checked) return "Local fire alarm";
+  return "";
+}
+
+function getExtinguisherScoring() {
+  const locations = qsa(".fire-extinguisher-location:checked");
+  const noScoreSelections = qsa(".fire-extinguisher-no-score:checked");
+  const labelText = input => input.closest("label")?.textContent.replace(/\s+/g, " ").trim() || "";
+
+  return {
+    answered: locations.length > 0 || noScoreSelections.length > 0,
+    points: locations.length * 0.5,
+    locations: locations.map(labelText),
+    noScoreSelections: noScoreSelections.map(labelText)
+  };
+}
+
+function getGradeFactorAnswer(factor) {
+  if (factor.source === "constructionType") return qs("#constructionType")?.value || "";
+  if (factor.source === "area") {
+    const area = getEstimatedBuildingArea();
+    return area === null ? "" : `${Math.round(area).toLocaleString()} sq ft`;
+  }
+  if (factor.source === "stories") return qs("#storeys")?.value || "";
+  if (factor.source === "units") return qs("#dwellingUnits")?.value || "";
+  if (factor.source === "adjacentExposure") {
+    const distance = getGradeChoiceLabel("adjacentDistance");
+    const material = getGradeChoiceLabel("adjacentMaterial");
+    if (!distance) return "";
+    if (qs("#grade-adjacentDistance")?.value === "80plus") return `${distance}; modifier not applicable`;
+    return distance && material ? `${distance}; ${material}` : "";
+  }
+
+  const input = qs(`#grade-${factor.key}`);
+  const option = factor.options.find(([, value]) => String(value) === input?.value);
+  return option?.[0] || "";
+}
+
+function calculateBuildingGrade() {
+  const missing = [];
+  const categoryScores = {};
+
+  buildingGradeCategories.forEach(category => {
+    let categoryScore = 0;
+    let complete = true;
+    category.factors.forEach(factor => {
+      const score = getGradeFactorScore(factor);
+      if (score === null) {
+        complete = false;
+        if (factor.source === "area") missing.push("Building area measurements");
+        else if (factor.source === "constructionType") missing.push("Construction type");
+        else if (factor.source === "stories") missing.push("Storeys above grade");
+        else if (factor.source === "units") missing.push("Dwelling units");
+        else if (factor.source === "adjacentExposure") {
+          missing.push(qs("#grade-adjacentDistance")?.value
+            ? "Adjacent-building exposure material (required under 80 ft)"
+            : "Adjacent-building distance");
+        }
+        else missing.push(factor.title);
+      } else {
+        categoryScore += score * factor.weight;
+      }
+    });
+
+    if (category.key === "probability") {
+      const heating = qs("#grade-heating")?.value;
+      const modifier = qs("#grade-heatingCondition")?.value;
+      if (heating !== "" && modifier === "") {
+        complete = false;
+        missing.push("Heating system condition modifier");
+      }
+    }
+    categoryScores[category.key] = complete ? categoryScore : null;
+  });
+
+  const propertySprinkler = getSprinkleredValue();
+  if (!propertySprinkler) missing.push("Sprinkler status");
+
+  const partialSprinkler = qs("#grade-partialSprinkler")?.value;
+  const fireAlarmStatus = getFireAlarmStatus();
+  const alarmScore = getFireAlarmSystemScore();
+  const extinguisherScoring = getExtinguisherScoring();
+  const annualTesting = qs("#grade-annualFireTesting")?.value;
+  if (propertySprinkler === "No" && partialSprinkler === "") {
+    missing.push("Partial sprinkler system status");
+  }
+  if (!fireAlarmStatus) missing.push("Fire alarm system");
+  else if (fireAlarmStatus === "yes" && alarmScore === null) missing.push("Fire alarm system type");
+  if (!extinguisherScoring.answered) missing.push("Portable fire extinguisher locations");
+  if (annualTesting === "") missing.push("Documented annual fire-system testing");
+
+  const sprinklerScore = propertySprinkler === "Yes" ? 5
+    : propertySprinkler === "No" && partialSprinkler === "1" ? 3
+    : propertySprinkler === "No" && partialSprinkler === "0" ? 0
+    : undefined;
+  const fireControlComplete = sprinklerScore !== undefined && alarmScore !== null &&
+    extinguisherScoring.answered &&
+    annualTesting !== "" && annualTesting !== undefined;
+  const fireControlScore = fireControlComplete
+    ? sprinklerScore + alarmScore + extinguisherScoring.points + Number(annualTesting)
+    : null;
+
+  const fireHall = qs("#grade-fireHallDistance")?.value;
+  const hydrant = qs("#grade-hydrantDistance")?.value;
+  if (fireHall === "") missing.push("Distance to fire hall");
+  if (hydrant === "") missing.push("Distance to hydrant");
+  const publicProtectionComplete = Boolean(fireHall && hydrant && propertySprinkler);
+  const fireHallScores = propertySprinkler === "No"
+    ? { under5: 5, "5to10": 3, over10: 0 }
+    : { under5: 2, "5to10": 1, over10: 0 };
+  const hydrantScores = { under150: 3, "150to300": 1, over300: 0 };
+  const publicProtectionScore = publicProtectionComplete
+    ? fireHallScores[fireHall] + hydrantScores[hydrant]
+    : null;
+
+  const baseComplete = buildingGradeCategories.every(category => categoryScores[category.key] !== null);
+  const baseRiskScore = baseComplete
+    ? buildingGradeCategories.reduce((total, category) =>
+        total + categoryScores[category.key] * category.weight, 0)
+    : null;
+
+  return {
+    missing: [...new Set(missing)],
+    categoryScores,
+    baseRiskScore,
+    fireControlScore,
+    publicProtectionScore
+  };
+}
+
+function updateBuildingGrade() {
+  const areaDisplay = qs("#gradeAreaEstimate");
+  if (areaDisplay) {
+    const area = getEstimatedBuildingArea();
+    const length = qs("#buildingLength")?.value;
+    const width = qs("#buildingWidth")?.value;
+    const stories = qs("#storeys")?.value;
+    areaDisplay.className = area === null ? "rule-alert neutral" : "rule-alert ok";
+    areaDisplay.textContent = area === null
+      ? "Enter building length and width in Section 1, plus above-grade storeys. Total floor area assumes a rectangular footprint: storeys × (length × width)."
+      : length && width
+        ? `Estimated total floor area (rectangular footprint): ${stories} storeys × (${length} ft × ${width} ft) = ${Math.round(area).toLocaleString()} sq ft — area score ${getBuildingAreaScore(area)} / 5.`
+        : `Estimated total floor area from saved footprint: ${Math.round(area).toLocaleString()} sq ft — area score ${getBuildingAreaScore(area)} / 5.`;
+  }
+
+  const result = calculateBuildingGrade();
+  const scores = qs("#buildingGradeScores");
+  if (scores) {
+    const format = (score, maximum) => score === null ? `Incomplete / ${maximum}` : `${score.toFixed(2)} / ${maximum}`;
+    scores.innerHTML = `
+      <div><strong>Base Risk Score</strong><span>${format(result.baseRiskScore, 5)}</span></div>
+      <div><strong>Fire Control Effectiveness</strong><span>${format(result.fireControlScore, 10.5)}</span></div>
+      <div><strong>Public Protection</strong><span>${format(result.publicProtectionScore, 8)}</span></div>`;
+  }
+
+  const missing = qs("#buildingGradeMissing");
+  if (missing) {
+    missing.classList.toggle("hidden", result.missing.length === 0);
+    missing.innerHTML = result.missing.length
+      ? `<strong>Missing answers:</strong> ${result.missing.join("; ")}. Scores remain provisional until these are complete.`
+      : "All grading inputs are complete.";
+    missing.classList.toggle("ok", result.missing.length === 0);
+    missing.classList.toggle("warning", result.missing.length > 0);
+  }
+}
+
+function openBuildingGrade() {
+  renderBuildingGradeFields();
+  updateBuildingGrade();
+  qs("#buildingGradeModal").classList.remove("hidden");
+}
+
+function closeBuildingGrade() {
+  qs("#buildingGradeModal").classList.add("hidden");
+}
+
 function updateFireAlarmQuestions() {
   const isInstalled = qs("#centralFireAlarmYes")?.checked || false;
   const questions = qs("#fireAlarmQuestions");
   questions?.classList.toggle("hidden", !isInstalled);
+  if (!isInstalled) {
+    qsa('input[name="fireAlarmSystemType"]').forEach(input => {
+      input.checked = false;
+    });
+  }
   const section = questions?.closest(".inspection-section");
   if (section) updateSectionNAButton(section);
 }
@@ -625,13 +1142,21 @@ function restoreFields(fields = {}) {
     ? controls.indexOf(firstSprinklerControl)
     : controls.length;
   const isLegacyLayout = !Object.prototype.hasOwnProperty.call(fields, "id:largestStoreyArea");
+  const hasBuildingDimensions = Object.prototype.hasOwnProperty.call(fields, "id:buildingLength");
+  const hasAlarmTypeFields = Object.prototype.hasOwnProperty.call(fields, "id:fireAlarmLocal");
+  const dimensionsIndex = controls.indexOf(qs("#buildingLength"));
+  const alarmTypeIndex = controls.indexOf(qs("#fireAlarmLocal"));
 
   controls.forEach((el, i) => {
     if (el.type === "file" || el.id === "savedInspectionSearch") return;
 
     let key = getFieldKey(el, i);
-    if (isLegacyLayout && key.startsWith("field:") && i < legacyFieldBoundary) {
-      key = `field:${i - 4}`;
+    if (key.startsWith("field:")) {
+      let fieldIndexOffset = 0;
+      if (!hasBuildingDimensions && i > dimensionsIndex) fieldIndexOffset += 2;
+      if (!hasAlarmTypeFields && i > alarmTypeIndex) fieldIndexOffset += 2;
+      if (isLegacyLayout && i < legacyFieldBoundary) fieldIndexOffset += 4;
+      if (fieldIndexOffset) key = `field:${i - fieldIndexOffset}`;
     }
 
     if (isLegacyLayout && el.id === "sprinkleredYes" &&
@@ -653,6 +1178,7 @@ function restoreFields(fields = {}) {
       el.value = fields[key] ?? "";
     }
   });
+  updateLargestStoreyFootprint();
 }
 
 function serializeItems() {
@@ -824,6 +1350,7 @@ async function openSavedInspection(id) {
   updateSprinklerSection();
   updateFireAlarmQuestions();
   updateCO();
+  updateBuildingGrade();
   updateCurrentInspectionLabel();
   closeOpenModal();
   showSaveNotice("Inspection opened.");
@@ -853,10 +1380,12 @@ async function startNewInspection() {
   }
 
   updateCrawl();
+  updateLargestStoreyFootprint();
   updateNBCCPart();
   updateSprinklerSection();
   updateFireAlarmQuestions();
   updateCO();
+  updateBuildingGrade();
   updateCurrentInspectionLabel();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1590,6 +2119,83 @@ async function generateInspectionPdf(options) {
   );
   y += 24;
 
+  if (options.includeGradeScores || options.includeGradeBreakdown) {
+    const grade = calculateBuildingGrade();
+    addHeading("Building Grade");
+    addText(`Base Risk Score: ${grade.baseRiskScore === null ? "Incomplete" : `${grade.baseRiskScore.toFixed(2)} / 5`}`, margin, {
+      size: 10, style: "bold"
+    });
+    addText(`Fire Control Effectiveness: ${grade.fireControlScore === null ? "Incomplete" : `${grade.fireControlScore} / 10.5`}`, margin, {
+      size: 10, style: "bold"
+    });
+    addText(`Public Protection: ${grade.publicProtectionScore === null ? "Incomplete" : `${grade.publicProtectionScore} / 8`}`, margin, {
+      size: 10, style: "bold"
+    });
+
+    if (options.includeGradeBreakdown) {
+      for (const category of buildingGradeCategories) {
+        const categoryScore = grade.categoryScores[category.key];
+        addText(`${category.title}: ${categoryScore === null ? "Incomplete" : `${categoryScore.toFixed(2)} / 5`}`, margin, {
+          size: 9, style: "bold"
+        });
+        for (const factor of category.factors) {
+          const answer = getGradeFactorAnswer(factor);
+          addText(`${factor.title}: ${answer || "Incomplete"}`, margin + 8, {
+            size: 8, maxWidth: contentWidth - 8, color: [70, 78, 85], lineHeight: 1.16
+          });
+        }
+        if (category.key === "probability") {
+          const heatingCondition = getGradeChoiceLabel("heatingCondition").replace(/\s*\([+-]?\d+\)$/, "");
+          addText(`Heating condition modifier: ${heatingCondition || "Incomplete"}`, margin + 8, {
+            size: 8, maxWidth: contentWidth - 8, color: [70, 78, 85], lineHeight: 1.16
+          });
+        }
+      }
+
+      const propertySprinkler = getSprinkleredValue();
+      const partialSprinkler = qs("#grade-partialSprinkler")?.value;
+      const sprinklerDescription = propertySprinkler === "Yes" ? "Full"
+        : propertySprinkler === "No" && partialSprinkler === "1" ? "Partial"
+        : propertySprinkler === "No" && partialSprinkler === "0" ? "None"
+        : "Incomplete";
+      const alarmChoice = getGradeChoiceLabel("fireAlarmType");
+      const extinguisherScoring = getExtinguisherScoring();
+      const extinguisherChoice = extinguisherScoring.answered
+        ? [...extinguisherScoring.locations, ...extinguisherScoring.noScoreSelections].join(", ")
+        : "Incomplete";
+      const annualTestChoice = getGradeChoiceLabel("annualFireTesting");
+      const fireHallValue = getGradeChoiceLabel("fireHallDistance");
+      const hydrantValue = getGradeChoiceLabel("hydrantDistance");
+      addText("Fire Control Effectiveness components", margin, { size: 9, style: "bold" });
+      const fireControlLines = [
+        `Sprinkler system: ${sprinklerDescription}`,
+        `Fire alarm: ${alarmChoice || "Incomplete"}`,
+        `Extinguishers: ${extinguisherChoice}`,
+        `Documented annual testing: ${annualTestChoice || "Incomplete"}`
+      ];
+      for (const line of fireControlLines) {
+        addText(line, margin + 8, {
+          size: 8, maxWidth: contentWidth - 8, color: [70, 78, 85], lineHeight: 1.16
+        });
+      }
+      addText("Public Protection components", margin, { size: 9, style: "bold" });
+      for (const line of [
+        `Fire-hall distance: ${fireHallValue || "Incomplete"}`,
+        `Hydrant distance: ${hydrantValue || "Incomplete"}`
+      ]) {
+        addText(line, margin + 8, {
+          size: 8, maxWidth: contentWidth - 8, color: [70, 78, 85], lineHeight: 1.16
+        });
+      }
+    }
+    if (grade.missing.length) {
+      addText(`Missing grading answers: ${grade.missing.join("; ")}`, margin, {
+        size: 8, color: [145, 55, 45], maxWidth: contentWidth, lineHeight: 1.16
+      });
+    }
+    y += 8;
+  }
+
   for (const section of qsa(".inspection-section")) {
     const title = getSectionTitle(section);
     if (!title || title.startsWith("1.") || title.startsWith("19.")) continue;
@@ -1848,7 +2454,9 @@ async function createPdfReadyReport() {
   const options = {
     includeSatisfactory: qs("#exportIncludeSatisfactory").checked,
     includeNA: qs("#exportIncludeNA").checked,
-    includeGuidance: qs("#exportIncludeGuidance").checked
+    includeGuidance: qs("#exportIncludeGuidance").checked,
+    includeGradeScores: qs("#exportIncludeGradeScores").checked,
+    includeGradeBreakdown: qs("#exportIncludeGradeBreakdown").checked
   };
 
   const button = qs("#createPdfReport");
@@ -2091,8 +2699,12 @@ function wireInputs() {
     el.addEventListener("input", () => {
       markDirty();
       if (el.id === "propertyAddress") updateCurrentInspectionLabel();
+      updateBuildingGrade();
     });
-    el.addEventListener("change", markDirty);
+    el.addEventListener("change", () => {
+      markDirty();
+      updateBuildingGrade();
+    });
   });
 
   ["#crawlSpace", "#crawlHeight", "#crawlOccupied", "#crawlFlue", "#crawlPlenum"]
@@ -2101,8 +2713,17 @@ function wireInputs() {
   ["#centralFireAlarmYes", "#centralFireAlarmNo"]
     .forEach(s => qs(s)?.addEventListener("change", updateFireAlarmQuestions));
 
-  ["#storeys", "#largestStoreyArea"]
+  ["#storeys"]
     .forEach(s => qs(s)?.addEventListener("input", updateNBCCPart));
+
+  ["#buildingLength", "#buildingWidth"].forEach(selector => {
+    const input = qs(selector);
+    ["input", "change"].forEach(eventName => input?.addEventListener(eventName, () => {
+      updateLargestStoreyFootprint();
+      updateNBCCPart();
+      updateBuildingGrade();
+    }));
+  });
 
   ["#sprinkleredYes", "#sprinkleredNo"]
     .forEach(s => qs(s)?.addEventListener("change", updateSprinklerSection));
@@ -2127,6 +2748,9 @@ function wireInputs() {
 
   qs("#openInspection").addEventListener("click", openOpenModal);
   qs("#newInspection").addEventListener("click", startNewInspection);
+  qs("#buildingGrade").addEventListener("click", openBuildingGrade);
+  qs("#closeBuildingGrade").addEventListener("click", closeBuildingGrade);
+  qs("#closeBuildingGradeFooter").addEventListener("click", closeBuildingGrade);
   qs("#exportInspection").addEventListener("click", openExportModal);
   qs("#transferInspection").addEventListener("click", openTransferModal);
 
@@ -2189,6 +2813,10 @@ function wireInputs() {
     if (event.target === qs("#openInspectionModal")) closeOpenModal();
   });
 
+  qs("#buildingGradeModal").addEventListener("click", event => {
+    if (event.target === qs("#buildingGradeModal")) closeBuildingGrade();
+  });
+
   qs("#savedInspectionSearch").addEventListener("input", event =>
     renderSavedInspections(event.target.value)
   );
@@ -2198,6 +2826,7 @@ function wireInputs() {
     if (!qs("#openInspectionModal").classList.contains("hidden")) closeOpenModal();
     if (!qs("#exportModal").classList.contains("hidden")) closeExportModal();
     if (!qs("#transferModal").classList.contains("hidden")) closeTransferModal();
+    if (!qs("#buildingGradeModal").classList.contains("hidden")) closeBuildingGrade();
   });
 }
 
@@ -2214,6 +2843,7 @@ async function init() {
   }
 
   build();
+  renderBuildingGradeFields();
   addBottomCollapseButtons();
   wireSections();
   wireSectionNAButtons();
@@ -2228,10 +2858,12 @@ async function init() {
   }
 
   updateCrawl();
+  updateLargestStoreyFootprint();
   updateNBCCPart();
   updateSprinklerSection();
   updateFireAlarmQuestions();
   updateCO();
+  updateBuildingGrade();
   updateCurrentInspectionLabel();
   updateAllSectionNAButtons();
 }
